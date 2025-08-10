@@ -11,6 +11,7 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,8 +47,11 @@ const cityAreaData = {
 };
 
 export default function UserDetailsScreen() {
+  console.log('🎯 UserDetailsScreen - Profile Setup Form loaded!');
+  
   const navigation = useNavigation();
   
+  // Form state - Same as your reference
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [fullAddress, setFullAddress] = useState('');
@@ -56,8 +60,12 @@ export default function UserDetailsScreen() {
   const [showCityModal, setShowCityModal] = useState(false);
   const [showAreaModal, setShowAreaModal] = useState(false);
   const [errors, setErrors] = useState({});
-  const [cacheData, setCacheData] = useState(null); // Fixed: proper null initialization and naming
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Backend integration state
+  const [userToken, setUserToken] = useState(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [cacheData, setCacheData] = useState(null);
 
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -83,31 +91,64 @@ export default function UserDetailsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Load user data for backend integration
+    loadUserData();
   }, []);
 
-  // Fixed: Proper async function with error handling
-  useEffect(() => {
-    async function getUserCache() {
-      try {
-        const userDataString = await AsyncStorage.getItem('@foodie_user_data');
-        if (userDataString) {
-          const userData = JSON.parse(userDataString);
-          setCacheData(userData);
-          
-          // Pre-fill form with cached user data
-          if (userData.displayName) {
-            setName(userData.displayName);
+  const loadUserData = async () => {
+    try {
+      console.log('📱 Loading stored user data...');
+      
+      const token = await AsyncStorage.getItem('@user_token');
+      const email = await AsyncStorage.getItem('@user_email');
+      const userData = await AsyncStorage.getItem('@user_data');
+      
+      console.log('📱 Token:', token);
+      console.log('📱 Email:', email);
+      
+      if (token && email) {
+        setUserToken(token);
+        setUserEmail(email);
+        
+        // Set cache data for display
+        if (userData) {
+          try {
+            const parsedData = JSON.parse(userData);
+            setCacheData(parsedData);
+            
+            // Pre-fill form with existing data
+            if (parsedData.name) setName(parsedData.name);
+            
+            console.log('📋 Pre-filled existing data');
+          } catch (error) {
+            console.log('⚠️ Error parsing existing user data');
           }
-          
-          console.log('📋 === CACHED USER DATA LOADED ===');
-          console.log(JSON.stringify(userData, null, 2));
+        } else {
+          // Create basic cache data
+          setCacheData({
+            email: email,
+            displayName: '',
+            uid: token.substring(0, 8),
+            provider: 'google',
+            loginTime: new Date().toISOString()
+          });
         }
-      } catch (error) {
-        console.error('Error loading cached user data:', error);
+      } else {
+        console.log('❌ No valid token found, redirecting to login');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
       }
+    } catch (error) {
+      console.error('❌ Error loading user data:', error);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
-    getUserCache();
-  }, []);
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -123,177 +164,103 @@ export default function UserDetailsScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Fixed: Proper async submit handler with data persistence
- const handleSubmit = async () => {
-  if (validateForm()) {
-    setIsLoading(true);
-    
-    try {
-      const addressData = {
-        name: name.trim(),
-        phone: phone.trim(),
-        fullAddress: fullAddress.trim(),
-        city: selectedCity,
-        cityName: cityAreaData[selectedCity].name,
-        area: selectedArea,
-        areaName: getSelectedAreaName(),
-        completedAt: new Date().toISOString(),
-      };
+  // **UPDATED: Backend integration with register API**
+  const handleSubmit = async () => {
+    if (validateForm()) {
+      setIsLoading(true);
+      
+      try {
+        console.log('💾 Saving profile data to backend...');
+        console.log('🔑 Using token:', userToken);
 
-      // Create comprehensive user data
-      if (cacheData) {
-        const updatedUserData = {
-          // Original authentication data
-          uid: cacheData.uid,
-          email: cacheData.email,
-          displayName: name.trim(), // Updated with form data
-          firstName: cacheData.firstName || name.trim().split(' ')[0] || '',
-          lastName: cacheData.lastName || name.trim().split(' ').slice(1).join(' ') || '',
-          photoURL: cacheData.photoURL || '',
-          
-          // Provider information
-          provider: cacheData.provider,
-          providerId: cacheData.providerId,
-          providerData: {
-            ...cacheData.providerData,
-          },
-          
-          // Authentication metadata
-          loginTime: cacheData.loginTime,
-          lastUpdated: new Date().toISOString(),
-          platform: cacheData.platform,
-          appVersion: cacheData.appVersion || '1.0.0',
-          isEmailVerified: cacheData.isEmailVerified,
-          
-          // Complete profile information
-          profile: {
-            isComplete: true,
-            phoneNumber: phone.trim(),
-            address: fullAddress.trim(),
-            city: selectedCity,
-            cityName: cityAreaData[selectedCity].name,
-            area: selectedArea,
-            areaName: getSelectedAreaName(),
-            profileCompletedAt: new Date().toISOString(),
-          },
-          
-          // Detailed address information
-          addressDetails: {
-            ...addressData,
-            coordinates: null, // Can be added later with geolocation
-            landmark: '', // Can be added in future updates
-            addressType: 'home', // default
-            isDefault: true,
-          },
-          
-          // User preferences (enhanced)
-          preferences: {
-            notifications: cacheData.preferences?.notifications ?? true,
-            location: cacheData.preferences?.location ?? false,
-            pushNotifications: {
-              orderUpdates: true,
-              promotionalOffers: true,
-              newFeatures: false,
-            },
-            language: 'en',
-            currency: 'INR',
-            theme: 'light',
-          },
-          
-          // App usage data
-          appData: {
-            firstLaunch: cacheData.appData?.firstLaunch || cacheData.loginTime,
-            profileCompletedOn: new Date().toISOString(),
-            totalLogins: (cacheData.appData?.totalLogins || 0) + 1,
-            lastActiveCity: selectedCity,
-            favoriteRestaurants: [],
-            orderHistory: [],
-            totalOrders: 0,
-            totalSpent: 0,
-          },
-          
-          // Delivery preferences
-          deliveryPreferences: {
-            defaultAddress: addressData,
-            preferredDeliveryTime: 'asap',
-            specialInstructions: '',
-            contactlessDelivery: false,
-          },
-          
-          // Payment information (placeholder)
-          paymentMethods: [],
-          
-          // Loyalty and rewards
-          loyalty: {
-            points: 0,
-            tier: 'bronze', // bronze, silver, gold, platinum
-            joinDate: new Date().toISOString(),
-            totalPointsEarned: 0,
-            totalPointsRedeemed: 0,
-          },
-          
-          // Support and feedback
-          support: {
-            hasContactedSupport: false,
-            feedbackGiven: [],
-            issues: [],
-          },
-          
-          // Marketing and analytics
-          marketing: {
-            referralCode: generateReferralCode(cacheData.uid),
-            referredBy: null,
-            totalReferrals: 0,
-            marketingConsent: true,
-            lastPromoCampaign: null,
-          },
-          
-          // Device and session info
-          deviceInfo: {
-            platform: cacheData.platform,
-            lastAccessTime: new Date().toISOString(),
-            deviceId: null, // Can be set using device info
-            appVersion: cacheData.appVersion || '1.0.0',
-          },
+        // Prepare data in the exact format specified
+        const profileData = {
+          email: userEmail,
+          name: name.trim(),
+          phone: phone.trim(),
+          area: getSelectedAreaName(), // Send area name
+          city: cityAreaData[selectedCity].name, // Send city name
+          full_address: fullAddress.trim(),
         };
 
-        // Save updated user data
-        await AsyncStorage.setItem('@foodie_user_data', JSON.stringify(updatedUserData));
-        
-        console.log('✅ User profile completed:', addressData);
-        console.log('📋 === COMPLETE USER DATA ===');
-        console.log(JSON.stringify(updatedUserData, null, 2));
-        
-        // Show success message with user details
-        alert(`Welcome ${name}! Your profile has been completed successfully.\n\nDelivery area: ${getSelectedAreaName()}, ${cityAreaData[selectedCity].name}`);
-        
-        // Navigate to home screen or dashboard
-        // navigation.navigate('HomeScreen');
-        // OR
-        // navigation.replace('MainApp'); // If you want to replace the entire stack
-        
-      } else {
-        // Handle case where no cached data exists (shouldn't happen normally)
-        console.error('❌ No cached user data found');
-        alert('Session expired. Please login again.');
-        // navigation.navigate('Login');
+        console.log('📤 Sending data:', profileData);
+
+        // Send to your register API endpoint
+        const response = await fetch('http://212.38.94.189:8000/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${userToken}`, // User token in header
+          },
+          body: JSON.stringify(profileData),
+        });
+
+        console.log('📡 Registration response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Backend error:', errorText);
+          throw new Error(`Registration failed: ${response.status} - ${errorText}`);
+        }
+
+        const responseData = await response.json();
+        console.log('✅ Registration successful:', responseData);
+
+        // Check if status is ok before proceeding
+        if (responseData.status === 'ok' || responseData.status === 'success') {
+          // Update local storage with complete data
+          const updatedUserData = {
+            ...cacheData,
+            name: name.trim(),
+            displayName: name.trim(),
+            phone: phone.trim(),
+            full_address: fullAddress.trim(),
+            area: getSelectedAreaName(),
+            city: cityAreaData[selectedCity].name,
+            profileCompleted: true,
+            registrationCompleted: true,
+            completedAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            
+          };
+
+          await AsyncStorage.setItem('@user_data', JSON.stringify(updatedUserData));
+          console.log('💾 Updated user data stored locally');
+
+          // Success message and navigate to Home
+          Alert.alert(
+            'Registration Complete!',
+            `Welcome ${name}! Your profile has been registered successfully.\n\nDelivery area: ${getSelectedAreaName()}, ${cityAreaData[selectedCity].name}`,
+            [
+              {
+                text: 'Continue',
+                onPress: () => {
+                  console.log('🏠 Navigating to Home after registration');
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Home' }],
+                  });
+                }
+              }
+            ]
+          );
+        } else {
+          throw new Error(responseData.message || 'Registration failed - invalid status');
+        }
+
+      } catch (error) {
+        console.error('❌ Registration error:', error);
+        Alert.alert(
+          'Registration Failed',
+          error.message || 'Unable to complete your registration. Please try again.',
+          [{ text: 'OK' }]
+        );
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error saving user details:', error);
-      alert('Failed to save details. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
-  }
-};
-
-// Helper function to generate referral code
-const generateReferralCode = (uid) => {
-  const prefix = 'FOODIE';
-  const suffix = uid.slice(-6).toUpperCase();
-  return `${prefix}${suffix}`;
-};
-
+  };
 
   const selectCity = (cityKey) => {
     setSelectedCity(cityKey);
@@ -430,7 +397,7 @@ const generateReferralCode = (uid) => {
           {cacheData && (
             <View style={styles.userInfoContainer}>
               <Text style={styles.userInfoText}>
-                Welcome, {cacheData.displayName || cacheData.email}!
+                Welcome, {cacheData.displayName || userEmail}!
               </Text>
             </View>
           )}
@@ -567,7 +534,7 @@ const generateReferralCode = (uid) => {
                 style={styles.submitGradient}
               >
                 <Text style={styles.submitButtonText}>
-                  {isLoading ? 'Saving...' : 'Continue'}
+                  {isLoading ? 'Registering...' : 'Complete Registration'}
                 </Text>
                 {!isLoading && <Text style={styles.submitArrow}>→</Text>}
               </LinearGradient>

@@ -13,11 +13,10 @@ import {
   Alert,
 } from 'react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import Checkbox from 'expo-checkbox';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -47,23 +46,120 @@ const banners = [
 
 export default function Login() {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [isAppleLoginAvailable, setIsAppleLoginAvailable] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [navigationAttempted, setNavigationAttempted] = useState(false);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const flatListRef = useRef(null);
+  const initializationRef = useRef(false);
+
+  // Reset authentication state when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 Login screen focused, resetting states');
+      setIsGoogleLoading(false);
+      setIsAuthenticating(false);
+      setNavigationAttempted(false);
+      initializationRef.current = false;
+    }, [])
+  );
+
+  // **YOUR LOGIC: Check cached user and navigate only if NOT new**
+  const checkCachedUserAndNavigate = async (userToken, userEmail) => {
+    try {
+      console.log('🔍 Checking cached user status...');
+      console.log('📧 Email to check:', userEmail);
+      
+      const response = await fetch('http://212.38.94.189:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          email: userEmail,
+        }),
+      });
+
+      if (!response.ok) {
+        console.log('❌ User check failed - staying on login screen');
+        return false; // Do nothing, stay on login
+      }
+
+      const responseData = await response.json();
+      console.log('✅ Cached user check response:', responseData);
+
+      if (responseData.status === 'success' || responseData.status === 'ok') {
+        const isNewUser = responseData.data?.new_user === true;
+        
+        console.log('🔍 Cached user new_user field:', responseData.data?.new_user);
+        console.log('🔍 Is new user:', isNewUser);
+        
+        if (!isNewUser) {
+          // **ONLY navigate to Home if user is NOT new**
+          console.log('👨‍💼 Cached user is NOT new - navigating to Home');
+          
+          // Update local storage with user data
+          const updatedUserData = {
+            email: userEmail,
+            name: responseData.data?.name || '',
+            phone: responseData.data?.phone || '',
+            new_user: false,
+            token: userToken,
+            loginTime: new Date().toISOString(),
+            status: 'success',
+            profileCompleted: true
+          };
+          
+          await AsyncStorage.setItem('@user_data', JSON.stringify(updatedUserData));
+          
+          setNavigationAttempted(true);
+          setTimeout(() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            });
+          }, 500);
+          
+          return true;
+        } else {
+          console.log('🆕 Cached user is NEW - doing nothing, staying on login screen');
+          return false; // Do nothing, stay on login
+        }
+      } else {
+        console.log('❌ Invalid response - staying on login screen');
+        return false; // Do nothing, stay on login
+      }
+
+    } catch (error) {
+      console.error('❌ Error checking cached user:', error);
+      return false; // Do nothing, stay on login
+    }
+  };
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Configure Google Sign-In
+      // Prevent multiple initializations
+      if (initializationRef.current || navigationAttempted) {
+        console.log('⚠️ Initialization already attempted, skipping');
+        return;
+      }
+
+      initializationRef.current = true;
+      setIsInitializing(true);
+      
       try {
+        console.log('🚀 Starting app initialization...');
+        
+        // Configure Google Sign-In
         const config = {
           webClientId: '88618355277-6vaut5msg35h3q2qkf1mq7ec1v8vikc2.apps.googleusercontent.com',
         };
@@ -76,46 +172,42 @@ export default function Login() {
 
         GoogleSignin.configure(config);
         console.log(`Google Sign-In configured successfully for ${Platform.OS}`);
-      } catch (error) {
-        console.error("Google Sign-In configuration error:", error);
-      }
 
-      // Check Apple Sign-In availability
-      if (Platform.OS === 'ios') {
-        try {
-          const isAvailable = await AppleAuthentication.isAvailableAsync();
-          setIsAppleLoginAvailable(isAvailable);
-          console.log("Apple Sign-In available:", isAvailable);
-        } catch (error) {
-          console.error("Apple Sign-In availability check error:", error);
-          setIsAppleLoginAvailable(false);
-        }
-      }
-
-      // Check stored user
-      try {
-        const storedUserData = await AsyncStorage.getItem('@foodie_user_data');
-        if (storedUserData) {
-          const userData = JSON.parse(storedUserData);
-          console.log('🔄 Stored user found:', userData.displayName || userData.email);
-          setUser(userData);
+        // **YOUR LOGIC: Check cached token/email and navigate only if NOT new**
+        const userToken = await AsyncStorage.getItem('@user_token');
+        const userEmail = await AsyncStorage.getItem('@user_email');
+        
+        console.log('🔍 Cache check - Token exists:', !!userToken);
+        console.log('🔍 Cache check - Email exists:', !!userEmail);
+        
+        if (userToken && userEmail && !navigationAttempted && isFocused) {
+          console.log('🔄 Found cached token/email - checking if user is NOT new...');
           
-          // Navigate immediately
-          navigation.navigate('UserDetailsScreen');
-        } else {
-          console.log('No stored user data found');
+          const navigated = await checkCachedUserAndNavigate(userToken, userEmail);
+          
+          if (navigated) {
+            return; // User was not new, navigation happened
+          }
+          // If not navigated, continue to show login screen
         }
+        
+        console.log('ℹ️ No cached session or user is new - showing login screen');
       } catch (error) {
-        console.error('Error checking stored user:', error);
+        console.error("❌ App initialization error:", error);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
-    initializeApp();
-  }, [navigation]);
+    // Only initialize when screen is focused and not already attempted
+    if (isFocused && !navigationAttempted) {
+      initializeApp();
+    }
+  }, [navigation, isFocused, navigationAttempted]);
 
   // Animation effects
   useEffect(() => {
-    if (!user) {
+    if (!isInitializing && !navigationAttempted && isFocused) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -142,7 +234,7 @@ export default function Login() {
 
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [isInitializing, navigationAttempted, isFocused]);
 
   const renderBanner = ({ item }) => (
     <View style={styles.bannerWrapper}>
@@ -162,37 +254,16 @@ export default function Login() {
     Alert.alert(title, message, [{ text: 'OK', onPress }]);
   };
 
-  // Store user data locally
-  const storeUserData = async (userData) => {
-    try {
-      await AsyncStorage.setItem('@foodie_user_data', JSON.stringify(userData));
-      console.log('✅ User data stored locally');
-      console.log('📋 === CACHED USER DATA ===');
-      console.log(JSON.stringify(userData, null, 2));
-    } catch (error) {
-      console.error('❌ Error storing user data:', error);
-    }
-  };
-
-  // Handle successful login
-  const handleSuccessfulLogin = async (userData) => {
-    try {
-      await storeUserData(userData);
-      setUser(userData);
-      
-      console.log('✅ Login successful for:', userData.displayName || userData.email);
-      
-      // Navigate directly
-      navigation.navigate('UserDetailsScreen');
-    } catch (error) {
-      console.error('❌ Error in handleSuccessfulLogin:', error);
-      showAlert('Error', 'Login was successful but navigation failed. Please try again.');
-    }
-  };
-
-  // Google Sign-In Handler
+  // **YOUR LOGIC: Google Sign-In with new_user check**
   const handleLogingoogle = async () => {
-    if (!termsAccepted || isAuthenticating) {
+    console.log('🚀 GOOGLE LOGIN CLICKED - Your custom logic');
+    
+    if (isAuthenticating) {
+      console.log('⚠️ Authentication already in progress');
+      return;
+    }
+
+    if (!termsAccepted) {
       showAlert('Terms Required', 'Please accept terms and conditions first');
       return;
     }
@@ -201,140 +272,145 @@ export default function Login() {
     setIsGoogleLoading(true);
     
     try {
-      console.log('🔄 Starting Google Sign-In process...');
+      console.log('🔄 Step 1: Starting Google Sign-In...');
 
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      await GoogleSignin.signOut();
+      
+      try {
+        await GoogleSignin.signOut();
+      } catch (signOutError) {
+        console.log('ℹ️ No existing Google session to sign out');
+      }
+      
       const userInfo = await GoogleSignin.signIn();
 
-      let googleUser;
-      if (userInfo.data && userInfo.data.user) {
-        googleUser = userInfo.data.user;
-      } else if (userInfo.user) {
-        googleUser = userInfo.user;
-      } else {
-        googleUser = {
-          id: userInfo.id,
-          name: userInfo.name || userInfo.displayName,
-          email: userInfo.email,
-          photo: userInfo.photo || userInfo.photoURL,
-          givenName: userInfo.givenName,
-          familyName: userInfo.familyName,
-        };
+      if (!userInfo) {
+        throw new Error('No user information received from Google Sign-In');
       }
 
-      const customUserData = {
-        uid: googleUser.id || userInfo.id || `google_${Date.now()}`,
-        email: googleUser.email || userInfo.email,
-        displayName: googleUser.name || userInfo.name || userInfo.displayName,
-        firstName: googleUser.givenName || userInfo.givenName || '',
-        lastName: googleUser.familyName || userInfo.familyName || '',
-        photoURL: googleUser.photo || userInfo.photo || userInfo.photoURL || '',
-        provider: 'google',
-        providerId: 'google.com',
-        providerData: {
-          googleId: googleUser.id || userInfo.id,
-          serverAuthCode: userInfo.data?.serverAuthCode || userInfo.serverAuthCode,
-          idToken: (userInfo.data?.idToken || userInfo.idToken) ? 'present' : 'not_available',
-        },
-        loginTime: new Date().toISOString(),
-        platform: Platform.OS,
-        appVersion: '1.0.0',
-        isEmailVerified: true,
-        preferences: {
-          notifications: true,
-          location: false,
-        },
-        profile: {
-          isComplete: false,
-          phoneNumber: '',
-          address: '',
-        }
-      };
+      console.log('✅ Step 2: Google Sign-In successful');
 
-      await handleSuccessfulLogin(customUserData);
+      // Extract email and token from Google response
+      let email, token;
+      
+      if (userInfo.data && userInfo.data.user) {
+        email = userInfo.data.user.email;
+        token = userInfo.data.idToken;
+      } else if (userInfo.user) {
+        email = userInfo.user.email;
+        token = userInfo.idToken;
+      } else {
+        email = userInfo.email;
+        token = userInfo.idToken;
+      }
+
+      if (!email || !token) {
+        throw new Error('Essential authentication data missing from Google response');
+      }
+
+      console.log('📧 Email:', email);
+      console.log('🔑 Google token received');
+
+      // **Step 3: Send to backend and get response**
+      console.log('🚀 Step 3: Sending login request to backend...');
+      
+      const response = await fetch('http://212.38.94.189:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          google_token: token,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend login failed: ${response.status}`);
+      }
+
+      const backendData = await response.json();
+      console.log('✅ Step 4: Backend response received:', backendData);
+
+      if (backendData.data && backendData.data.token) {
+        // **YOUR LOGIC: Check new_user and navigate accordingly**
+        const isNewUser = backendData.data.new_user === true;
+        
+        console.log('🎯 Backend new_user field:', backendData.data.new_user);
+        console.log('🎯 Is new user:', isNewUser);
+        
+        if (isNewUser) {
+          console.log('🆕 NEW USER (new_user=true) - Navigating to UserDetailsScreen');
+          
+          // Store token and email for new user
+          await AsyncStorage.setItem('@user_token', backendData.data.token);
+          await AsyncStorage.setItem('@user_email', email);
+          
+          const userDataToStore = {
+            email: email,
+            name: backendData.data.name || '',
+            new_user: true,
+            token: backendData.data.token,
+            loginTime: new Date().toISOString(),
+            status: backendData.status,
+            profileCompleted: false
+          };
+          
+          await AsyncStorage.setItem('@user_data', JSON.stringify(userDataToStore));
+          
+          setNavigationAttempted(true);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'UserDetailsScreen' }],
+          });
+          
+        } else {
+          console.log('👨‍💼 EXISTING USER (new_user=false) - Storing token/email and navigating to Home');
+          
+          // Store response token and email
+          await AsyncStorage.setItem('@user_token', backendData.data.token);
+          await AsyncStorage.setItem('@user_email', email);
+          
+          const userDataToStore = {
+            email: email,
+            name: backendData.data.name || '',
+            phone: backendData.data.phone || '',
+            new_user: false,
+            token: backendData.data.token,
+            loginTime: new Date().toISOString(),
+            status: backendData.status,
+            profileCompleted: true
+          };
+          
+          await AsyncStorage.setItem('@user_data', JSON.stringify(userDataToStore));
+          
+          setNavigationAttempted(true);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
+        }
+        
+      } else {
+        throw new Error('No token received from backend');
+      }
 
     } catch (error) {
-      console.error('❌ Google Sign-In error:', error);
+      console.error('❌ Google login error:', error);
       
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log('ℹ️ User cancelled Google Sign-In');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        showAlert('Please Wait', 'Sign-in is already in progress. Please wait a moment.');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        showAlert('Service Unavailable', 'Google Play Services is not available on this device.');
       } else {
-        showAlert('Sign-In Failed', error.message || 'Please try again.');
+        showAlert('Sign-In Failed', error.message || 'Unable to complete Google Sign-In. Please try again.');
       }
     } finally {
+      // Reset states
+      setIsAuthenticating(false);
       setIsGoogleLoading(false);
-      setIsAuthenticating(false);
-    }
-  };
-
-  // Apple Sign-In Handler
-  const handleLoginApple = async () => {
-    if (!termsAccepted || isAuthenticating) {
-      showAlert('Terms Required', 'Please accept terms and conditions first');
-      return;
-    }
-
-    if (Platform.OS !== 'ios' || !isAppleLoginAvailable) {
-      showAlert('Not Available', 'Apple Sign-In is not available on this device');
-      return;
-    }
-
-    setIsAuthenticating(true);
-    setIsAppleLoading(true);
-    
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      const customUserData = {
-        uid: credential.user || `apple_${Date.now()}`,
-        email: credential.email || '',
-        displayName: credential.fullName ? 
-          `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim() : 
-          'Apple User',
-        firstName: credential.fullName?.givenName || '',
-        lastName: credential.fullName?.familyName || '',
-        photoURL: '',
-        provider: 'apple',
-        providerId: 'apple.com',
-        providerData: {
-          appleId: credential.user,
-          identityToken: credential.identityToken ? 'present' : 'not_available',
-          authorizationCode: credential.authorizationCode ? 'present' : 'not_available',
-        },
-        loginTime: new Date().toISOString(),
-        platform: Platform.OS,
-        appVersion: '1.0.0',
-        isEmailVerified: credential.email ? true : false,
-        preferences: {
-          notifications: true,
-          location: false,
-        },
-        profile: {
-          isComplete: false,
-          phoneNumber: '',
-          address: '',
-        }
-      };
-
-      await handleSuccessfulLogin(customUserData);
-      
-    } catch (error) {
-      console.error('🍎 Apple Sign-In error:', error);
-      
-      if (error.code === 'ERR_CANCELED') {
-        console.log('🍎 Apple Sign-In was canceled by user');
-      } else {
-        showAlert('Error', 'Apple Sign-In failed. Please try again.');
-      }
-    } finally {
-      setIsAppleLoading(false);
-      setIsAuthenticating(false);
     }
   };
 
@@ -347,6 +423,26 @@ export default function Login() {
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50
   };
+
+  // Show loading screen during initialization
+  if (isInitializing || navigationAttempted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+          <LinearGradient
+            colors={['#FF6B35', '#F7931E']}
+            style={styles.logoCircle}
+          >
+            <Text style={styles.logoText}>F</Text>
+          </LinearGradient>
+          <Text style={[styles.appTitle, { marginTop: 20 }]}>Foodie</Text>
+          <Text style={styles.appSubtitle}>
+            {navigationAttempted ? 'Redirecting...' : 'Loading...'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -414,7 +510,7 @@ export default function Login() {
         <View style={styles.loginSection}>
           <Text style={styles.loginTitle}>Get Started</Text>
           <Text style={styles.loginSubtitle}>
-            Choose your preferred way to continue
+            Sign in with your Google account to continue
           </Text>
 
           {/* Google Button */}
@@ -437,32 +533,12 @@ export default function Login() {
             {isGoogleLoading && <Text style={styles.loadingDots}>●●●</Text>}
           </TouchableOpacity>
 
-          {/* Apple Button (iOS only) */}
-          {Platform.OS === 'ios' && isAppleLoginAvailable && (
-            <TouchableOpacity
-              style={[
-                styles.loginButton,
-                styles.appleButton,
-                (!termsAccepted || isAuthenticating) && styles.disabledButton,
-              ]}
-              onPress={handleLoginApple}
-              disabled={!termsAccepted || isAuthenticating}
-              activeOpacity={0.8}
-            >
-              <View style={styles.buttonIcon}>
-                <Text style={styles.appleIcon}>🍎</Text>
-              </View>
-              <Text style={[styles.buttonText, styles.appleButtonText]}>
-                {isAppleLoading ? 'Signing in...' : 'Continue with Apple'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
           {/* Terms and Conditions */}
           <TouchableOpacity
             style={styles.termsContainer}
             onPress={() => setTermsAccepted(!termsAccepted)}
             activeOpacity={0.8}
+            disabled={isAuthenticating}
           >
             <Checkbox
               value={termsAccepted}
@@ -481,8 +557,6 @@ export default function Login() {
     </SafeAreaView>
   );
 }
-
-
 
 // Keep all your existing styles
 const styles = StyleSheet.create({
@@ -642,9 +716,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  appleButton: {
-    backgroundColor: '#000',
-  },
   disabledButton: {
     opacity: 0.5,
   },
@@ -661,17 +732,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FF6B35',
   },
-  appleIcon: {
-    fontSize: Math.min(width * 0.04, 16),
-    color: '#fff',
-  },
   buttonText: {
     fontSize: Math.min(width * 0.04, 16),
     fontWeight: '600',
     color: '#374151',
-  },
-  appleButtonText: {
-    color: '#fff',
   },
   termsContainer: {
     flexDirection: 'row',
