@@ -1,4 +1,4 @@
-package com.foodie
+package com.arunsharma9018.Foodie
 
 import android.app.Application
 import android.content.res.Configuration
