@@ -71,13 +71,14 @@ export default function Login() {
     }, [])
   );
 
-  // **YOUR LOGIC: Check cached user and navigate only if NOT new**
+  // **FIXED: Check cached user and navigate to Home if valid**
   const checkCachedUserAndNavigate = async (userToken, userEmail) => {
     try {
       console.log('🔍 Checking cached user status...');
       console.log('📧 Email to check:', userEmail);
+      console.log('🔑 Token to verify:', userToken);
       
-      const response = await fetch('http://212.38.94.189:8000/api/login', {
+      const response = await fetch('http://212.38.94.189:8000/api/get-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,28 +91,26 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        console.log('❌ User check failed - staying on login screen');
-        return false; // Do nothing, stay on login
+        console.log('❌ User verification failed - staying on login screen');
+        return false;
       }
 
       const responseData = await response.json();
-      console.log('✅ Cached user check response:', responseData);
+      console.log('✅ Cached user verification response:', responseData);
 
       if (responseData.status === 'success' || responseData.status === 'ok') {
-        const isNewUser = responseData.data?.new_user === true;
-        
-        console.log('🔍 Cached user new_user field:', responseData.data?.new_user);
-        console.log('🔍 Is new user:', isNewUser);
-        
-        if (!isNewUser) {
-          // **ONLY navigate to Home if user is NOT new**
-          console.log('👨‍💼 Cached user is NOT new - navigating to Home');
+        // **FIXED: Check if email and token match from response**
+        if (responseData.data?.email === userEmail && responseData.data?.token === userToken) {
+          console.log('✅ Cached user verified - navigating to Home');
           
-          // Update local storage with user data
+          // Update local storage with latest user data
           const updatedUserData = {
             email: userEmail,
             name: responseData.data?.name || '',
             phone: responseData.data?.phone || '',
+            area: responseData.data?.area || '',
+            city: responseData.data?.city || '',
+            full_address: responseData.data?.full_address || '',
             new_user: false,
             token: userToken,
             loginTime: new Date().toISOString(),
@@ -131,17 +130,17 @@ export default function Login() {
           
           return true;
         } else {
-          console.log('🆕 Cached user is NEW - doing nothing, staying on login screen');
-          return false; // Do nothing, stay on login
+          console.log('❌ Email or token mismatch - staying on login screen');
+          return false;
         }
       } else {
-        console.log('❌ Invalid response - staying on login screen');
-        return false; // Do nothing, stay on login
+        console.log('❌ Invalid response status - staying on login screen');
+        return false;
       }
 
     } catch (error) {
       console.error('❌ Error checking cached user:', error);
-      return false; // Do nothing, stay on login
+      return false;
     }
   };
 
@@ -173,25 +172,25 @@ export default function Login() {
         GoogleSignin.configure(config);
         console.log(`Google Sign-In configured successfully for ${Platform.OS}`);
 
-        // **YOUR LOGIC: Check cached token/email and navigate only if NOT new**
+        // **FIXED: Check cached token/email and navigate if valid**
         const userToken = await AsyncStorage.getItem('@user_token');
         const userEmail = await AsyncStorage.getItem('@user_email');
         
-        console.log('🔍 Cache check - Token exists:', !!userToken);
+        console.log('🔍 Cache check - Token exists:',userToken, !!userToken);
         console.log('🔍 Cache check - Email exists:', !!userEmail);
         
         if (userToken && userEmail && !navigationAttempted && isFocused) {
-          console.log('🔄 Found cached token/email - checking if user is NOT new...');
+          console.log('🔄 Found cached token/email - verifying with backend...');
           
           const navigated = await checkCachedUserAndNavigate(userToken, userEmail);
           
           if (navigated) {
-            return; // User was not new, navigation happened
+            return; // User was verified and navigation happened
           }
           // If not navigated, continue to show login screen
         }
         
-        console.log('ℹ️ No cached session or user is new - showing login screen');
+        console.log('ℹ️ No cached session or verification failed - showing login screen');
       } catch (error) {
         console.error("❌ App initialization error:", error);
       } finally {
@@ -254,9 +253,9 @@ export default function Login() {
     Alert.alert(title, message, [{ text: 'OK', onPress }]);
   };
 
-  // **YOUR LOGIC: Google Sign-In with new_user check**
+  // **ENHANCED: Google Sign-In with proper new_user logic**
   const handleLogingoogle = async () => {
-    console.log('🚀 GOOGLE LOGIN CLICKED - Your custom logic');
+    console.log('🚀 GOOGLE LOGIN CLICKED - Starting authentication');
     
     if (isAuthenticating) {
       console.log('⚠️ Authentication already in progress');
@@ -311,7 +310,7 @@ export default function Login() {
       console.log('📧 Email:', email);
       console.log('🔑 Google token received');
 
-      // **Step 3: Send to backend and get response**
+      // **Step 3: Send to backend for authentication**
       console.log('🚀 Step 3: Sending login request to backend...');
       
       const response = await fetch('http://212.38.94.189:8000/api/login', {
@@ -333,7 +332,7 @@ export default function Login() {
       console.log('✅ Step 4: Backend response received:', backendData);
 
       if (backendData.data && backendData.data.token) {
-        // **YOUR LOGIC: Check new_user and navigate accordingly**
+        // **ROUTING LOGIC: Check new_user and navigate accordingly**
         const isNewUser = backendData.data.new_user === true;
         
         console.log('🎯 Backend new_user field:', backendData.data.new_user);
@@ -365,7 +364,7 @@ export default function Login() {
           });
           
         } else {
-          console.log('👨‍💼 EXISTING USER (new_user=false) - Storing token/email and navigating to Home');
+          console.log('👨‍💼 EXISTING USER (new_user=false) - Storing data and navigating to Home');
           
           // Store response token and email
           await AsyncStorage.setItem('@user_token', backendData.data.token);
@@ -375,6 +374,9 @@ export default function Login() {
             email: email,
             name: backendData.data.name || '',
             phone: backendData.data.phone || '',
+            area: backendData.data.area || '',
+            city: backendData.data.city || '',
+            full_address: backendData.data.full_address || '',
             new_user: false,
             token: backendData.data.token,
             loginTime: new Date().toISOString(),
@@ -558,7 +560,6 @@ export default function Login() {
   );
 }
 
-// Keep all your existing styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -682,7 +683,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    marginBottom: Platform.OS === 'ios' ? height * 0.05 : height * 0.1,
+    marginBottom: Platform.OS === 'ios' ? height * 0.14: height * 0.2,
   },
   loginTitle: {
     fontSize: Math.min(width * 0.06, 24),
