@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Foodie",
+    "slug": "Foodie", 
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.arunsharma9018.Foodie",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "google",
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.88618355277-tqbeqvv88c7f4cm37g1d4urblpmonvio"
+            ]
+          }
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "212.38.94.189": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
+      }
+    },
+    "android": {
+      "package": "com.arunsharma9018.Foodie",
+      "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true
+    },
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.88618355277-tqbeqvv88c7f4cm37g1d4urblpmonvio"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ]
+  }
+}
