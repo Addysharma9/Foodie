@@ -594,7 +594,9 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingBottom: height * 0.01,
+    paddingBottom: height * 0.02, // Add bottom padding
+    backgroundColor: 'transparent', // Ensure no background
+    zIndex: 1,
   },
   logoContainer: {
     marginBottom: height * 0.01,
@@ -627,31 +629,39 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
   },
+  // FIXED CAROUSEL SECTION
   carouselSection: {
-    flex: 1,
-    justifyContent: 'center',
-    maxHeight: height * 0.32,
+    marginVertical: height * 0.02, // Add top and bottom margin
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    minHeight: 180, // Minimum height to prevent collapsing
+    maxHeight: 220, // Maximum height for consistency
   },
   carousel: {
-    height: Math.min(height * 0.25, 170),
+    height: Math.min(height * 0.25, 180), // Responsive but capped height
+    width: '100%',
   },
   bannerWrapper: {
-    width: width - (width * 0.1),
+    width: width - (width * 0.1), // Responsive width
     paddingHorizontal: 5,
+    alignSelf: 'center', // Center the banner
+    marginBottom: 10, // Space below banner
   },
   bannerCard: {
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: '#FF6B35', // Fallback background
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 6, // Android shadow
   },
   bannerContent: {
     padding: width * 0.05,
-    height: Math.min(height * 0.22, 150),
+    height: 150, // Fixed height for consistency
     justifyContent: 'center',
+    minHeight: 120, // Minimum height
   },
   bannerLeft: {
     flex: 1,
@@ -672,11 +682,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.9,
   },
+  // FIXED DOTS CONTAINER
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: height * 0.015,
-    marginBottom: height * 0.05,
+    paddingVertical: height * 0.015,
+    paddingBottom: height * 0.03, // Extra bottom padding
+    backgroundColor: 'transparent',
   },
   dot: {
     width: 8,
@@ -689,6 +701,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B35',
     width: 20,
   },
+  // FIXED LOGIN SECTION
   loginSection: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -698,7 +711,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    marginBottom: Platform.OS === 'ios' ? height * 0.14: height * 0.2,
+    marginTop: height * 0.02, // Space above login section
+    marginBottom: Platform.OS === 'ios' ? height * 0.1 : height * 0.12, // Responsive bottom margin
+    marginHorizontal: width * 0.02, // Side margins
   },
   loginTitle: {
     fontSize: Math.min(width * 0.06, 24),
@@ -711,16 +726,16 @@ const styles = StyleSheet.create({
     fontSize: Math.min(width * 0.04, 16),
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: height * 0.015,
+    marginBottom: height * 0.02,
   },
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: height * 0.015,
+    paddingVertical: height * 0.018, // Slightly larger tap area
     paddingHorizontal: width * 0.05,
     borderRadius: 12,
-    marginBottom: height * 0.01,
+    marginBottom: height * 0.015,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -756,8 +771,9 @@ const styles = StyleSheet.create({
   termsContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: height * 0.015,
+    marginTop: height * 0.02,
     paddingVertical: 8,
+    paddingHorizontal: 4, // Side padding
   },
   checkbox: {
     width: 20,
