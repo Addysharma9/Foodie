@@ -977,6 +977,8 @@ export default function HomeScreen() {
     try {
       setSectionsLoading(true);
       const sectionsResponse = await fetch(`${baseURL}/api/home-sections/${categoryId}`);
+      console.log("Logs: ",sectionsResponse);
+      
       if (sectionsResponse.ok) {
         const sectionsData = await sectionsResponse.json();
         let allSections = [];
@@ -1677,7 +1679,7 @@ const styles = StyleSheet.create({
   categoryIcon: {
     width: 64,
     height: 64,
-    borderRadius: 20,
+    borderRadius: 40,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1693,7 +1695,7 @@ const styles = StyleSheet.create({
   categoryImage: {
     width: 50,
     height: 50,
-    borderRadius: 16,
+    borderRadius: 30,
     resizeMode: 'cover',
   },
   categoryName: {
