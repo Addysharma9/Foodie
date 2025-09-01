@@ -387,6 +387,7 @@ const CartModal = ({
   placeOrder,
   loading
 }) => {
+  const navigation = useNavigation(); // Add this line
   const [couponCode, setCouponCode] = useState('');
   const [showCouponInput, setShowCouponInput] = useState(false);
 
@@ -395,16 +396,20 @@ const CartModal = ({
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
   const handlePlaceOrder = async () => {
-    const orderData = {
-      deliveryAddress: "Default Address",
-      paymentMethod: "COD",
-      specialInstructions: ""
-    };
-
-    const result = await placeOrder(orderData);
-    if (result.success) {
-      onClose();
-    }
+    console.log('handlePlaceOrder called'); // For debugging
+    console.log('Navigation object:', navigation); // For debugging
+    
+    // Navigate to Order Placement Screen with cart data
+    navigation.navigate('OrderPlacement', {
+      cartItems: safeCartItems,
+      cartTotal: cartTotal,
+      subtotal: subtotal,
+      deliveryFee: deliveryFee,
+      couponDiscount: couponDiscount,
+      appliedCoupon: appliedCoupon
+    });
+    
+    onClose(); // Close the cart modal
   };
 
   const handleApplyCoupon = async () => {
@@ -1442,6 +1447,7 @@ export default function HomeScreen() {
         removeCoupon={removeCoupon}
         placeOrder={placeOrder}
         loading={cartLoading}
+        navigation={navigation} 
       />
 
       {/* Bottom Tabs */}

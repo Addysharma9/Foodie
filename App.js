@@ -5,6 +5,7 @@ import Login from './Login';
 import UserDetailsScreen from './Userdetail';
 import Homescreen from './HomeScreen';
 import Profile from './ProfileScreen';
+import OrderPlacementScreen from './OrderPlacementScreen'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -42,6 +43,13 @@ export default function App() {
         <Stack.Screen 
           name="Profile" 
           component={Profile}
+          options={{
+            gestureEnabled: false
+          }}
+        />
+        <Stack.Screen 
+          name="OrderPlacement" 
+          component={OrderPlacementScreen}
           options={{
             gestureEnabled: false
           }}
