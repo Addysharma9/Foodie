@@ -14,15 +14,21 @@ import {
   Platform,
   SafeAreaView,
   Alert,
+  Vibration,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import FloatingGirlAssistant from './Animatedgirl';
-import { useCart } from './hooks/useCart'; // Import your cart hook
+import { useCart } from './hooks/useCart';
 
 const { width, height } = Dimensions.get('window');
 const baseURL = 'http://212.38.94.189:8000';
+
+// Responsive dimensions
+const isTablet = width > 768;
+const CARD_MARGIN = width * 0.04;
+const CARD_PADDING = width * 0.04;
 
 // Enhanced price formatting
 const formatPrice = (amount) => {
@@ -40,42 +46,43 @@ const formatDate = (dateString) => {
   });
 };
 
-// Modern color palette
+// Professional color palette
 const COLORS = {
-  primary: '#FF6B35',
-  primaryDark: '#E55A2B',
-  primaryLight: '#FFE8E1',
-  secondary: '#FF3008',
-  accent: '#4ECDC4',
-  warning: '#FFA726',
-  background: '#FAFBFC',
-  surface: '#FFFFFF',
-  surfaceElevated: '#FFFFFF',
-  surfaceAlt: '#F8F9FA',
-  textPrimary: '#1A202C',
-  textSecondary: '#4A5568',
-  textMuted: '#9CA3AF',
-  textInverse: '#FFFFFF',
-  success: '#48BB78',
-  error: '#F56565',
-  info: '#4299E1',
-  border: '#E2E8F0',
-  divider: '#EDF2F7',
-  shadow: 'rgba(0, 0, 0, 0.08)',
-  gradientPrimary: ['#FF6B35', '#FF8A65'],
-  gradientSecondary: ['#4ECDC4', '#45B7D1'],
-  gradientAccent: ['#667EEA', '#764BA2'],
+  primary: '#2563eb',
+  primaryDark: '#1d4ed8',
+  primaryLight: '#eff6ff',
+  secondary: '#7c3aed',
+  accent: '#06b6d4',
+  warning: '#f59e0b',
+  background: '#f8fafc',
+  surface: '#ffffff',
+  surfaceElevated: '#ffffff',
+  surfaceAlt: '#f1f5f9',
+  textPrimary: '#0f172a',
+  textSecondary: '#475569',
+  textMuted: '#94a3b8',
+  textInverse: '#ffffff',
+  success: '#10b981',
+  error: '#ef4444',
+  info: '#3b82f6',
+  border: '#e2e8f0',
+  divider: '#f1f5f9',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  gradientPrimary: ['#2563eb', '#1d4ed8'],
+  gradientSecondary: ['#06b6d4', '#0891b2'],
+  gradientSuccess: ['#10b981', '#059669'],
+  gradientError: ['#ef4444', '#dc2626'],
 };
 
 const FONTS = {
   sizes: {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
+    xs: width * 0.03,
+    sm: width * 0.035,
+    base: width * 0.04,
+    lg: width * 0.045,
+    xl: width * 0.05,
+    xxl: width * 0.06,
+    xxxl: width * 0.08,
   },
   weights: {
     light: '300',
@@ -84,7 +91,6 @@ const FONTS = {
     semiBold: '600',
     bold: '700',
     extraBold: '800',
-    black: '900',
   }
 };
 
@@ -98,59 +104,109 @@ const getImageUrl = (imagePath) => {
   return `${baseURL}/storage/${imagePath}`;
 };
 
-// Order Status Badge Component
+// Skeleton Loading Components
+const SkeletonCard = () => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonHeader}>
+        <Animated.View style={[styles.skeletonText, styles.skeletonOrderNumber, { opacity }]} />
+        <Animated.View style={[styles.skeletonBadge, { opacity }]} />
+      </View>
+      <View style={styles.skeletonContent}>
+        <Animated.View style={[styles.skeletonImage, { opacity }]} />
+        <View style={styles.skeletonDetails}>
+          <Animated.View style={[styles.skeletonText, styles.skeletonTitle, { opacity }]} />
+          <Animated.View style={[styles.skeletonText, styles.skeletonDescription, { opacity }]} />
+          <Animated.View style={[styles.skeletonText, styles.skeletonPrice, { opacity }]} />
+        </View>
+      </View>
+      <View style={styles.skeletonActions}>
+        <Animated.View style={[styles.skeletonButton, styles.skeletonButtonLarge, { opacity }]} />
+        <Animated.View style={[styles.skeletonButton, styles.skeletonButtonSmall, { opacity }]} />
+      </View>
+    </View>
+  );
+};
+
+// Professional Order Status Badge Component
 const OrderStatusBadge = ({ status }) => {
   const getStatusConfig = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
         return { 
           color: COLORS.warning, 
-          bgColor: COLORS.warning + '20', 
-          icon: '⏳', 
-          text: 'Pending'
+          gradient: [COLORS.warning, '#f97316'],
+          text: 'Pending',
+          icon: 'clock'
         };
       case 'confirmed':
         return { 
           color: COLORS.info, 
-          bgColor: COLORS.info + '20', 
-          icon: '✅', 
-          text: 'Confirmed'
+          gradient: [COLORS.info, '#1e40af'],
+          text: 'Confirmed',
+          icon: 'check'
         };
       case 'preparing':
         return { 
           color: COLORS.primary, 
-          bgColor: COLORS.primaryLight, 
-          icon: '👨‍🍳', 
-          text: 'Preparing'
+          gradient: COLORS.gradientPrimary,
+          text: 'Preparing',
+          icon: 'cooking'
         };
       case 'on_way':
       case 'out_for_delivery':
         return { 
           color: COLORS.accent, 
-          bgColor: COLORS.accent + '20', 
-          icon: '🚗', 
-          text: 'On the way'
+          gradient: COLORS.gradientSecondary,
+          text: 'On the way',
+          icon: 'truck'
         };
       case 'delivered':
         return { 
           color: COLORS.success, 
-          bgColor: COLORS.success + '20', 
-          icon: '🎉', 
-          text: 'Delivered'
+          gradient: COLORS.gradientSuccess,
+          text: 'Delivered',
+          icon: 'check-circle'
         };
       case 'cancelled':
         return { 
           color: COLORS.error, 
-          bgColor: COLORS.error + '20', 
-          icon: '❌', 
-          text: 'Cancelled'
+          gradient: COLORS.gradientError,
+          text: 'Cancelled',
+          icon: 'x'
         };
       default:
         return { 
           color: COLORS.textMuted, 
-          bgColor: COLORS.border, 
-          icon: '📦', 
-          text: 'Unknown'
+          gradient: [COLORS.textMuted, COLORS.textSecondary],
+          text: 'Unknown',
+          icon: 'help'
         };
     }
   };
@@ -158,70 +214,14 @@ const OrderStatusBadge = ({ status }) => {
   const config = getStatusConfig(status);
 
   return (
-    <View style={[styles.statusBadge, { backgroundColor: config.bgColor }]}>
-      <Text style={styles.statusIcon}>{config.icon}</Text>
-      <Text style={[styles.statusText, { color: config.color }]}>{config.text}</Text>
-    </View>
+    <LinearGradient colors={config.gradient} style={styles.statusBadge}>
+      <View style={styles.statusIndicator} />
+      <Text style={styles.statusText}>{config.text}</Text>
+    </LinearGradient>
   );
 };
 
-// Helper functions for status configuration
-const getStatusConfig = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'pending':
-      return { 
-        color: COLORS.warning, 
-        bgColor: COLORS.warning + '20', 
-        icon: '⏳', 
-        text: 'Pending'
-      };
-    case 'confirmed':
-      return { 
-        color: COLORS.info, 
-        bgColor: COLORS.info + '20', 
-        icon: '✅', 
-        text: 'Confirmed'
-      };
-    case 'preparing':
-      return { 
-        color: COLORS.primary, 
-        bgColor: COLORS.primaryLight, 
-        icon: '👨‍🍳', 
-        text: 'Preparing'
-      };
-    case 'on_way':
-    case 'out_for_delivery':
-      return { 
-        color: COLORS.accent, 
-        bgColor: COLORS.accent + '20', 
-        icon: '🚗', 
-        text: 'On the way'
-      };
-    case 'delivered':
-      return { 
-        color: COLORS.success, 
-        bgColor: COLORS.success + '20', 
-        icon: '🎉', 
-        text: 'Delivered'
-      };
-    case 'cancelled':
-      return { 
-        color: COLORS.error, 
-        bgColor: COLORS.error + '20', 
-        icon: '❌', 
-        text: 'Cancelled'
-      };
-    default:
-      return { 
-        color: COLORS.textMuted, 
-        bgColor: COLORS.border, 
-        icon: '📦', 
-        text: 'Unknown'
-      };
-  }
-};
-
-// Individual Order Item Card Component
+// Enhanced Individual Order Item Card Component
 const OrderItemCard = ({ orderItem, addToCart, isItemInCart, getItemQuantity }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -230,71 +230,48 @@ const OrderItemCard = ({ orderItem, addToCart, isItemInCart, getItemQuantity }) 
   const product = orderItem.product || orderItem;
   const imageUri = getImageUrl(product.featured_image || product.image);
   
-  // ✅ COMPLETELY FIXED: Better price extraction logic with proper validation
- // Inside your Order Item component
+  // Price calculation functions
+  const getDisplayPrice = () => {
+    const priceCandidates = [
+      parseFloat(orderItem.unit_price),
+      parseFloat(orderItem.price),
+      parseFloat(orderItem.pivot?.price),
+      parseFloat(orderItem.product?.sale_price),
+      parseFloat(orderItem.product?.price),
+    ];
 
-// Function to get the display price per item (used for calculations)
-const getDisplayPrice = () => {
-  // Possible price sources in order of priority
-  const priceCandidates = [
-    parseFloat(orderItem.unit_price),             // direct unit price on order item
-    parseFloat(orderItem.price),                  // fallback price on order item
-    parseFloat(orderItem.pivot?.price),           // pivot price if exists
-    parseFloat(orderItem.product?.sale_price),    // sale price from nested product
-    parseFloat(orderItem.product?.price),         // regular price from nested product
-  ];
-
-  for (const p of priceCandidates) {
-    if (p && !isNaN(p) && p > 0) {
-      console.log('Using price:', p);
-      return p;
+    for (const p of priceCandidates) {
+      if (p && !isNaN(p) && p > 0) {
+        return p;
+      }
     }
-  }
-  console.warn('Fallback price: 150 used');
-  return 150;  // fallback price if none found
-};
+    return 150;
+  };
 
+  const getCurrentSalePrice = () => {
+    const salePrice = parseFloat(orderItem.product?.sale_price ?? orderItem.sale_price);
+    const regularPrice = parseFloat(orderItem.product?.price ?? orderItem.price);
 
-// Function to get the current discounted price (if any)
-const getCurrentSalePrice = () => {
-  const salePrice = parseFloat(orderItem.product?.sale_price ?? orderItem.sale_price);
-  const regularPrice = parseFloat(orderItem.product?.price ?? orderItem.price);
+    if (salePrice && !isNaN(salePrice) && salePrice > 0 &&
+        regularPrice && !isNaN(regularPrice) && salePrice < regularPrice) {
+      return salePrice;
+    }
+    return null;
+  };
 
-  if (salePrice && !isNaN(salePrice) && salePrice > 0 &&
-      regularPrice && !isNaN(regularPrice) && salePrice < regularPrice) {
-    return salePrice;
-  }
-  return null;  // no discount
-};
+  const getCurrentOriginalPrice = () => {
+    const price = parseFloat(orderItem.product?.price ?? orderItem.price);
+    if (price && !isNaN(price) && price > 0) {
+      return price;
+    }
+    return null;
+  };
 
-// Function to get the current original price
-const getCurrentOriginalPrice = () => {
-  const price = parseFloat(orderItem.product?.price ?? orderItem.price);
-  if (price && !isNaN(price) && price > 0) {
-    return price;
-  }
-  return null;
-};
-
-// Inside component render or calculation logic
-const displayPrice = getDisplayPrice();
-const quantity = parseInt(orderItem.quantity || orderItem.total_quantity || 1);
-const itemTotal = displayPrice * quantity;
-const currentSalePrice = getCurrentSalePrice();
-const currentOriginalPrice = getCurrentOriginalPrice();
-
-console.log('Price debug:', {
-  displayPrice, quantity, itemTotal, currentSalePrice, currentOriginalPrice,
-  rawData: {
-    unit_price: orderItem.unit_price,
-    price: orderItem.price,
-    pivot_price: orderItem.pivot?.price,
-    product_sale_price: orderItem.product?.sale_price,
-    product_price: orderItem.product?.price,
-  }
-});
-
-  
+  const displayPrice = getDisplayPrice();
+  const quantity = parseInt(orderItem.quantity || orderItem.total_quantity || 1);
+  const itemTotal = displayPrice * quantity;
+  const currentSalePrice = getCurrentSalePrice();
+  const currentOriginalPrice = getCurrentOriginalPrice();
   
   // Check if item is in current cart
   const inCart = isItemInCart ? isItemInCart(product.id || orderItem.id) : false;
@@ -302,48 +279,40 @@ console.log('Price debug:', {
 
   const handleAddToCart = async () => {
     setAddingToCart(true);
+    Vibration.vibrate(50);
+    
     try {
-      // ✅ FIXED: Better cart price calculation
       const cartPrice = (() => {
-        // Priority for cart price:
-        // 1. Current sale price if it exists and is less than regular price
         if (currentSalePrice && currentOriginalPrice && currentSalePrice < currentOriginalPrice) {
           return currentSalePrice;
         }
-        // 2. Current regular price
         if (currentOriginalPrice) {
           return currentOriginalPrice;
         }
-        // 3. What was paid in this order
         return displayPrice;
       })();
 
       const itemToAdd = {
         id: product.id || orderItem.id,
         name: product.name || orderItem.name,
-        price: cartPrice, // Use calculated cart price
+        price: cartPrice,
         featured_image: product.featured_image || product.image,
         description: product.description || '',
         spice_level: product.spice_level || 'None',
         preparation_time: product.preparation_time || 25,
-        sale_price: currentSalePrice, // Current sale price or null
-        original_price: currentOriginalPrice || cartPrice, // Original price for reference
+        sale_price: currentSalePrice,
+        original_price: currentOriginalPrice || cartPrice,
         is_featured: product.is_featured || false,
         average_rating: product.average_rating || 0,
       };
 
-      console.log('🛒 Adding to cart with corrected prices:', {
-        name: itemToAdd.name,
-        cartPrice: cartPrice,
-        displayPrice: displayPrice,
-        currentSalePrice: currentSalePrice,
-        currentOriginalPrice: currentOriginalPrice,
-        finalItemPrice: itemToAdd.price
-      });
-
       const result = await addToCart(itemToAdd, 1, {
         spice_level: product.spice_level
       });
+      
+      if (result.success) {
+        Alert.alert('Success', `${product.name} added to cart successfully!`);
+      }
       
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -352,23 +321,6 @@ console.log('Price debug:', {
       setAddingToCart(false);
     }
   };
-
-  // Debug logging with more detail
-  console.log('📊 Order Item Debug:', {
-    productId: product.id,
-    productName: product.name,
-    displayPrice,
-    currentSalePrice,
-    currentOriginalPrice,
-    quantity,
-    itemTotal,
-    rawData: {
-      pivotPrice: orderItem.pivot?.price,
-      orderItemPrice: orderItem.price,
-      productPrice: product.price,
-      productSalePrice: product.sale_price
-    }
-  });
 
   return (
     <View style={styles.orderItemCard}>
@@ -389,7 +341,7 @@ console.log('Price debug:', {
         <View style={styles.itemImageContainer}>
           {!imageLoaded && (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.placeholderText}>🍽️</Text>
+              <Text style={styles.placeholderText}>Loading...</Text>
             </View>
           )}
           {imageUri && (
@@ -400,14 +352,18 @@ console.log('Price debug:', {
               resizeMode="cover"
             />
           )}
-          {product.spice_level && product.spice_level !== 'None' && (
-            <View style={styles.spiceLevelBadge}>
-              <Text style={styles.spiceLevelText}>🌶️</Text>
-            </View>
-          )}
+          
+          {/* Quantity Badge */}
           <View style={styles.quantityBadge}>
             <Text style={styles.quantityText}>×{quantity}</Text>
           </View>
+
+          {/* Rating Badge */}
+          {product.average_rating && product.average_rating > 0 && (
+            <View style={styles.ratingBadge}>
+              <Text style={styles.ratingText}>★ {product.average_rating}</Text>
+            </View>
+          )}
         </View>
 
         {/* Product Details */}
@@ -426,7 +382,7 @@ console.log('Price debug:', {
           <View style={styles.itemSpecs}>
             {product.spice_level && product.spice_level !== 'None' && (
               <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Spice:</Text>
+                <Text style={styles.specLabel}>Spice Level:</Text>
                 <Text style={styles.specValue}>{product.spice_level}</Text>
               </View>
             )}
@@ -436,15 +392,9 @@ console.log('Price debug:', {
                 <Text style={styles.specValue}>{product.preparation_time} mins</Text>
               </View>
             )}
-            {product.average_rating && product.average_rating > 0 && (
-              <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Rating:</Text>
-                <Text style={styles.specValue}>★ {product.average_rating}</Text>
-              </View>
-            )}
           </View>
 
-          {/* Pricing - Show what was actually paid for this order */}
+          {/* Pricing */}
           <View style={styles.pricingSection}>
             <View style={styles.priceBreakdown}>
               <Text style={styles.unitPrice}>
@@ -453,62 +403,43 @@ console.log('Price debug:', {
               <Text style={styles.itemTotal}>₹{formatPrice(itemTotal)}</Text>
             </View>
             
-            {/* Show discount info if there was a discount on this order */}
             {orderItem.pivot?.price && product.price && 
              parseFloat(orderItem.pivot.price) < parseFloat(product.price) && (
               <View style={styles.discountInfo}>
-                <Text style={styles.originalPrice}>₹{formatPrice(product.price)}</Text>
+                <Text style={styles.originalPrice}>Was ₹{formatPrice(product.price)}</Text>
                 <Text style={styles.savedAmount}>
-                  You saved ₹{formatPrice((parseFloat(product.price) - parseFloat(orderItem.pivot.price)) * quantity)}
+                  Saved ₹{formatPrice((parseFloat(product.price) - parseFloat(orderItem.pivot.price)) * quantity)}
                 </Text>
               </View>
             )}
             
-            {/* Show current product discount (for items being added to cart) */}
             {currentSalePrice && currentOriginalPrice && currentSalePrice < currentOriginalPrice && (
               <Text style={styles.currentDiscount}>
-                🏷️ Current price: ₹{formatPrice(currentSalePrice)} (was ₹{formatPrice(currentOriginalPrice)})
+                Current offer: ₹{formatPrice(currentSalePrice)} (was ₹{formatPrice(currentOriginalPrice)})
               </Text>
             )}
           </View>
         </View>
       </View>
 
-      {/* Order Actions */}
+      {/* Actions */}
       <View style={styles.itemActions}>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[styles.addToCartButton, inCart && styles.addedButton, addingToCart && styles.loadingButton]}
-            onPress={handleAddToCart}
-            disabled={addingToCart}
-          >
-            <View style={[styles.addToCartGradient, inCart && styles.addedButtonBg]}>
-              <Text style={[styles.addToCartButtonText, inCart && styles.addedButtonText]}>
-                {addingToCart ? 'Adding...' : (inCart ? `In Cart (${cartQuantity})` : 'Add to Cart')}
-              </Text>
-            </View>
-          </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.addToCartButton, inCart && styles.addedButton, addingToCart && styles.loadingButton]}
+          onPress={handleAddToCart}
+          disabled={addingToCart}
+        >
+          <Text style={styles.addToCartButtonText}>
+            {addingToCart ? 'Adding...' : (inCart ? `In Cart (${cartQuantity})` : 'Add to Cart')}
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity style={styles.helpButton}>
-            <Text style={styles.helpButtonText}>Help</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Delivery Estimate */}
-        {(orderItem.order_status === 'preparing' || orderItem.order_status === 'on_way' || orderItem.order_status === 'out_for_delivery') && (
-          <View style={styles.deliveryEstimate}>
-            <Text style={styles.estimateIcon}>🕒</Text>
-            <Text style={styles.estimateText}>
-              {orderItem.order_status === 'preparing' 
-                ? 'Preparing your order...' 
-                : 'On the way to you!'
-              }
-            </Text>
-          </View>
-        )}
+        <TouchableOpacity style={styles.helpButton}>
+          <Text style={styles.helpButtonText}>Help</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Order Progress Indicator */}
+      {/* Progress Indicator */}
       <View style={styles.progressIndicator}>
         <View style={styles.progressTrack}>
           <View 
@@ -529,13 +460,34 @@ console.log('Price debug:', {
   );
 };
 
+// Helper functions for status configuration
+const getStatusConfig = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return { color: COLORS.warning, text: 'Pending' };
+    case 'confirmed':
+      return { color: COLORS.info, text: 'Confirmed' };
+    case 'preparing':
+      return { color: COLORS.primary, text: 'Preparing' };
+    case 'on_way':
+    case 'out_for_delivery':
+      return { color: COLORS.accent, text: 'On the way' };
+    case 'delivered':
+      return { color: COLORS.success, text: 'Delivered' };
+    case 'cancelled':
+      return { color: COLORS.error, text: 'Cancelled' };
+    default:
+      return { color: COLORS.textMuted, text: 'Unknown' };
+  }
+};
+
 // Helper functions for progress
 const getProgressPercentage = (status) => {
   switch (status?.toLowerCase()) {
-    case 'pending': return 10;
-    case 'confirmed': return 25;
-    case 'preparing': return 50;
-    case 'on_way': case 'out_for_delivery': return 75;
+    case 'pending': return 20;
+    case 'confirmed': return 40;
+    case 'preparing': return 60;
+    case 'on_way': case 'out_for_delivery': return 80;
     case 'delivered': return 100;
     case 'cancelled': return 0;
     default: return 0;
@@ -544,13 +496,13 @@ const getProgressPercentage = (status) => {
 
 const getProgressText = (status) => {
   switch (status?.toLowerCase()) {
-    case 'pending': return 'Order received, awaiting confirmation';
-    case 'confirmed': return 'Order confirmed, starting preparation';
-    case 'preparing': return 'Your delicious meal is being prepared';
-    case 'on_way': case 'out_for_delivery': return 'On the way to your location';
-    case 'delivered': return 'Delivered successfully! Enjoy your meal';
+    case 'pending': return 'Order received and being processed';
+    case 'confirmed': return 'Order confirmed, preparation starting';
+    case 'preparing': return 'Your order is being prepared';
+    case 'on_way': case 'out_for_delivery': return 'Order is on the way to you';
+    case 'delivered': return 'Order delivered successfully';
     case 'cancelled': return 'Order was cancelled';
-    default: return 'Status update pending';
+    default: return 'Checking order status...';
   }
 };
 
@@ -564,19 +516,16 @@ const groupOrderItems = (items) => {
     const key = `${productId}-${item.order_status}`;
     
     if (groupedItems[key]) {
-      // Add to existing group - sum quantities and preserve price info
       const existingQty = parseInt(groupedItems[key].total_quantity || groupedItems[key].quantity || 1);
       const newQty = parseInt(item.quantity || 1);
       groupedItems[key].total_quantity = existingQty + newQty;
       
-      // Keep the most recent order date
       if (new Date(item.order_created_at) > new Date(groupedItems[key].order_created_at)) {
         groupedItems[key].order_created_at = item.order_created_at;
         groupedItems[key].order_id = item.order_id;
         groupedItems[key].order_number = item.order_number;
       }
     } else {
-      // Create new group
       groupedItems[key] = {
         ...item,
         total_quantity: parseInt(item.quantity || 1),
@@ -606,7 +555,6 @@ export default function MyOrder() {
   } = cartHookResult || {};
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-50)).current;
 
   useEffect(() => {
     getUserId();
@@ -622,12 +570,10 @@ export default function MyOrder() {
   const getUserId = async () => {
     try {
       const email = await AsyncStorage.getItem('@user_email');
-      console.log('Retrieved email from storage:', email);
 
       if (!email) {
-        console.log('No email found');
-        Alert.alert('Error', 'No user email found. Please login again.', [
-          { text: 'OK', onPress: () => navigation.replace('Login') }
+        Alert.alert('Authentication Required', 'Please login to view your orders', [
+          { text: 'Login', onPress: () => navigation.replace('Login') }
         ]);
         return;
       }
@@ -645,18 +591,16 @@ export default function MyOrder() {
       }
 
       const data = await response.json();
-      console.log('User data:', data);
       
       if (data && data.data && data.data.id) {
         setUserId(data.data.id);
-        console.log('User ID set:', data.data.id);
       } else {
         throw new Error('Invalid user data received');
       }
 
     } catch (error) {
       console.error('Error fetching user data:', error);
-      Alert.alert('Error', 'Failed to fetch user data. Please try again.', [
+      Alert.alert('Connection Error', 'Unable to load user data. Please try again.', [
         { text: 'Retry', onPress: getUserId },
         { text: 'Go Home', onPress: () => navigation.replace('Home') }
       ]);
@@ -664,22 +608,19 @@ export default function MyOrder() {
   };
 
   const animateIn = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start();
+    Animated.timing(fadeAnim, { 
+      toValue: 1, 
+      duration: 300, 
+      useNativeDriver: true 
+    }).start();
   };
 
   // Fetch and flatten order items from products array
   const fetchOrderItems = async () => {
-    if (!userId) {
-      console.log('No userId available for fetching orders');
-      return;
-    }
+    if (!userId) return;
 
     try {
       setLoading(true);
-      console.log('Fetching orders for user ID:', userId);
       
       const response = await fetch(`${baseURL}/api/orders/user/${userId}`, {
         method: 'GET',
@@ -687,12 +628,9 @@ export default function MyOrder() {
           'Content-Type': 'application/json',
         },
       });
-
-      console.log('Orders fetch response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Orders data received:', JSON.stringify(data, null, 2));
         
         let ordersArray = [];
         if (Array.isArray(data)) {
@@ -703,15 +641,12 @@ export default function MyOrder() {
           ordersArray = data.orders;
         }
         
-        // Flatten orders into individual items using products array
         const flattenedItems = [];
         ordersArray.forEach(order => {
-          // Use 'products' instead of 'items' as shown in your API response
           if (order.products && Array.isArray(order.products)) {
             order.products.forEach((item, index) => {
               flattenedItems.push({
                 ...item,
-                // Include product details if available in pivot
                 product: item.product || item,
                 order_id: order.id,
                 order_number: order.order_number,
@@ -721,10 +656,8 @@ export default function MyOrder() {
                 delivery_address: order.delivery_address,
                 payment_method: order.payment_method,
                 payment_status: order.payment_status,
-                // ✅ FIXED: Better price and quantity extraction with validation
                 quantity: item.pivot?.quantity || item.quantity || 1,
                 price: (() => {
-                  // Validate and return first valid price
                   const sources = [item.pivot?.price, item.sale_price, item.price];
                   for (const price of sources) {
                     const parsed = parseFloat(price);
@@ -732,30 +665,21 @@ export default function MyOrder() {
                       return parsed;
                     }
                   }
-                  return 150; // Fallback only if no valid price found
+                  return 150;
                 })(),
-                // Generate unique key for each item instance
                 unique_key: `${order.id}-${item.id || item.product_id}-${index}-${Date.now()}`
               });
             });
           }
         });
 
-        // Group items by product ID and status, summing quantities
         const groupedItems = groupOrderItems(flattenedItems);
-
-        // Sort by order creation date (newest first)
         groupedItems.sort((a, b) => new Date(b.order_created_at) - new Date(a.order_created_at));
         
         setOrderItems(groupedItems);
-        console.log('Order items set:', groupedItems.length, 'items');
-        console.log('Sample item:', JSON.stringify(groupedItems[0], null, 2));
         
       } else {
-        const errorText = await response.text();
-        console.error('Failed to fetch orders:', response.status, errorText);
         setOrderItems([]);
-        
         if (response.status === 404) {
           console.log('No orders found for user');
         } else {
@@ -765,7 +689,7 @@ export default function MyOrder() {
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrderItems([]);
-      Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      Alert.alert('Network Error', 'Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -792,8 +716,9 @@ export default function MyOrder() {
     return filterItems(activeTab);
   };
 
+  // Professional tabs
   const tabs = [
-    { id: 'all', label: 'All Items', count: orderItems.length },
+    { id: 'all', label: 'All Orders', count: orderItems.length },
     { id: 'pending', label: 'Pending', count: filterItems('pending').length },
     { id: 'confirmed', label: 'Confirmed', count: filterItems('confirmed').length },
     { id: 'on_way', label: 'On the way', count: filterItems('on_way').length + filterItems('out_for_delivery').length },
@@ -810,23 +735,27 @@ export default function MyOrder() {
     />
   );
 
+  const renderSkeletonItem = ({ item }) => <SkeletonCard />;
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>🍽️</Text>
-      <Text style={styles.emptyTitle}>No order items yet</Text>
+      <View style={styles.emptyIconContainer}>
+        <Text style={styles.emptyIcon}>📋</Text>
+      </View>
+      <Text style={styles.emptyTitle}>
+        {activeTab === 'all' ? 'No orders yet' : 'No orders found'}
+      </Text>
       <Text style={styles.emptyDescription}>
         {activeTab === 'all' 
-          ? "You haven't ordered any items yet. Start exploring delicious food!"
-          : `No ${activeTab.replace('_', ' ')} items found.`
+          ? "Start exploring our menu to place your first order"
+          : `No ${activeTab.replace('_', ' ')} orders found. Try a different filter.`
         }
       </Text>
       <TouchableOpacity 
         style={styles.exploreButton}
         onPress={() => navigation.replace('Home')}
       >
-        <LinearGradient colors={COLORS.gradientPrimary} style={styles.exploreGradient}>
-          <Text style={styles.exploreButtonText}>Explore Food</Text>
-        </LinearGradient>
+        <Text style={styles.exploreButtonText}>Explore Menu</Text>
       </TouchableOpacity>
     </View>
   );
@@ -834,9 +763,9 @@ export default function MyOrder() {
   if (!userId && loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading user data...</Text>
+          <Text style={styles.loadingText}>Loading your orders...</Text>
         </View>
       </SafeAreaView>
     );
@@ -844,10 +773,10 @@ export default function MyOrder() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
-      {/* Enhanced Header */}
-      <LinearGradient colors={COLORS.gradientPrimary} style={styles.header}>
+      {/* Header */}
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity 
             onPress={() => navigation.replace('Home')} 
@@ -857,11 +786,11 @@ export default function MyOrder() {
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>My Orders</Text>
-            <Text style={styles.headerSubtitle}>Track your food items</Text>
+            <Text style={styles.headerSubtitle}>Track your order history</Text>
           </View>
-          <View style={styles.headerPlaceholder} />
+          <View style={styles.headerSpacer} />
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Filter Tabs */}
       <View style={styles.tabsContainer}>
@@ -874,7 +803,10 @@ export default function MyOrder() {
             <TouchableOpacity
               key={tab.id}
               style={[styles.tabButton, activeTab === tab.id && styles.activeTabButton]}
-              onPress={() => setActiveTab(tab.id)}
+              onPress={() => {
+                setActiveTab(tab.id);
+                Vibration.vibrate(30);
+              }}
             >
               <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
                 {tab.label}
@@ -892,17 +824,24 @@ export default function MyOrder() {
       </View>
 
       {/* Order Items List */}
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading your order items...</Text>
-          </View>
+          <FlatList
+            data={Array(5).fill({})}
+            renderItem={renderSkeletonItem}
+            keyExtractor={(item, index) => `skeleton-${index}`}
+            contentContainerStyle={styles.itemsContainer}
+            showsVerticalScrollIndicator={false}
+          />
         ) : (
           <FlatList
             data={getFilteredItems()}
             renderItem={renderOrderItem}
             keyExtractor={(item) => item.unique_key}
-            contentContainerStyle={styles.itemsContainer}
+            contentContainerStyle={[
+              styles.itemsContainer,
+              getFilteredItems().length === 0 && styles.emptyContentContainer
+            ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -917,10 +856,10 @@ export default function MyOrder() {
         )}
       </Animated.View>
 
-      {/* Floating Girl Assistant */}
+      {/* Floating Assistant */}
       <FloatingGirlAssistant
         defaultVisible={true}
-        size={72}
+        size={isTablet ? 80 : 60}
         startDock="right"
         bottomOffset={50}
         snapToEdges={true}
@@ -930,40 +869,40 @@ export default function MyOrder() {
   );
 }
 
-// Enhanced Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   header: {
+    backgroundColor: COLORS.surface,
     paddingTop: 12,
-    paddingBottom: 20,
-    elevation: 8,
+    paddingBottom: 16,
+    elevation: 2,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: CARD_MARGIN,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
   backButtonText: {
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.textInverse,
-    fontWeight: FONTS.weights.bold,
+    fontSize: FONTS.sizes.lg,
+    color: COLORS.textPrimary,
+    fontWeight: FONTS.weights.medium,
   },
   headerTitleContainer: {
     flex: 1,
@@ -971,40 +910,35 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: FONTS.sizes.xl,
-    fontWeight: FONTS.weights.black,
-    color: COLORS.textInverse,
-    marginBottom: 2,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.textPrimary,
   },
   headerSubtitle: {
     fontSize: FONTS.sizes.sm,
-    color: 'rgba(255,255,255,0.8)',
+    color: COLORS.textSecondary,
     fontWeight: FONTS.weights.medium,
+    marginTop: 2,
   },
-  headerPlaceholder: {
-    width: 44,
+  headerSpacer: {
+    width: 40,
   },
   tabsContainer: {
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
   tabsScrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: CARD_MARGIN,
+    paddingVertical: 12,
   },
   tabButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginRight: 12,
     borderRadius: 20,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surfaceAlt,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -1014,12 +948,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: FONTS.sizes.sm,
-    fontWeight: FONTS.weights.semiBold,
+    fontWeight: FONTS.weights.medium,
     color: COLORS.textSecondary,
   },
   activeTabText: {
     color: COLORS.textInverse,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.semiBold,
   },
   tabBadge: {
     backgroundColor: COLORS.textSecondary,
@@ -1031,7 +965,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   activeTabBadge: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   tabBadgeText: {
     fontSize: FONTS.sizes.xs,
@@ -1045,21 +979,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemsContainer: {
-    padding: 20,
+    padding: CARD_MARGIN,
     paddingBottom: 100,
   },
+  emptyContentContainer: {
+    flexGrow: 1,
+  },
   
-  // Individual Item Card Styles
+  // Order Item Card Styles
   orderItemCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: CARD_MARGIN,
     overflow: 'hidden',
-    elevation: 4,
+    elevation: 2,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 4,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -1067,8 +1004,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingHorizontal: CARD_PADDING,
+    paddingTop: CARD_PADDING,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
@@ -1076,56 +1013,41 @@ const styles = StyleSheet.create({
   orderMetaInfo: {},
   orderNumber: {
     fontSize: FONTS.sizes.sm,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.semiBold,
     color: COLORS.textPrimary,
     marginBottom: 2,
   },
   orderDate: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    fontWeight: FONTS.weights.medium,
+    fontWeight: FONTS.weights.regular,
   },
   itemMainContent: {
     flexDirection: 'row',
-    padding: 20,
+    padding: CARD_PADDING,
   },
   itemImageContainer: {
     position: 'relative',
     marginRight: 16,
   },
   imagePlaceholder: {
-    width: 100,
-    height: 100,
+    width: isTablet ? 120 : 90,
+    height: isTablet ? 120 : 90,
     borderRadius: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   placeholderText: {
-    fontSize: FONTS.sizes.xl,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textMuted,
   },
   itemImage: {
-    width: 100,
-    height: 100,
+    width: isTablet ? 120 : 90,
+    height: isTablet ? 120 : 90,
     borderRadius: 12,
-    resizeMode: 'cover',
-  },
-  spiceLevelBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: COLORS.warning,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spiceLevelText: {
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textInverse,
   },
   quantityBadge: {
     position: 'absolute',
@@ -1135,8 +1057,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 2,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
   },
   quantityText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.textInverse,
+  },
+  ratingBadge: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    backgroundColor: COLORS.success,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  ratingText: {
     fontSize: FONTS.sizes.xs,
     fontWeight: FONTS.weights.bold,
     color: COLORS.textInverse,
@@ -1145,25 +1085,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontSize: FONTS.sizes.lg,
-    fontWeight: FONTS.weights.bold,
+    fontSize: FONTS.sizes.base,
+    fontWeight: FONTS.weights.semiBold,
     color: COLORS.textPrimary,
-    marginBottom: 6,
-    lineHeight: 24,
+    marginBottom: 4,
+    lineHeight: FONTS.sizes.base * 1.3,
   },
   itemDescription: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: 8,
+    lineHeight: FONTS.sizes.sm * 1.4,
   },
   itemSpecs: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   specItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   specLabel: {
     fontSize: FONTS.sizes.xs,
@@ -1174,92 +1114,85 @@ const styles = StyleSheet.create({
   specValue: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textPrimary,
-    fontWeight: FONTS.weights.semiBold,
+    fontWeight: FONTS.weights.medium,
   },
   pricingSection: {
     marginTop: 'auto',
+    backgroundColor: COLORS.surfaceAlt,
+    padding: 8,
+    borderRadius: 8,
   },
   priceBreakdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   unitPrice: {
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    fontWeight: FONTS.weights.medium,
+    fontWeight: FONTS.weights.regular,
   },
   itemTotal: {
-    fontSize: FONTS.sizes.lg,
-    fontWeight: FONTS.weights.black,
+    fontSize: FONTS.sizes.base,
+    fontWeight: FONTS.weights.bold,
     color: COLORS.primary,
   },
   discountInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   originalPrice: {
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
     textDecorationLine: 'line-through',
   },
   savedAmount: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.success,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.medium,
   },
-  // ✅ NEW: Style for current discount info
   currentDiscount: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.info,
     fontWeight: FONTS.weights.medium,
-    fontStyle: 'italic',
+    backgroundColor: COLORS.info + '20',
+    padding: 4,
+    borderRadius: 4,
+    textAlign: 'center',
+    marginTop: 2,
   },
   itemActions: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  actionButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    paddingHorizontal: CARD_PADDING,
+    paddingBottom: 12,
+    gap: 8,
   },
   addToCartButton: {
     flex: 2,
-    borderRadius: 10,
-    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   addedButton: {
-    opacity: 0.8,
+    backgroundColor: COLORS.success,
   },
   loadingButton: {
-    opacity: 0.6,
-  },
-  addToCartGradient: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  addedButtonBg: {
-    backgroundColor: COLORS.success,
+    opacity: 0.7,
   },
   addToCartButtonText: {
     color: COLORS.textInverse,
     fontSize: FONTS.sizes.sm,
-    fontWeight: FONTS.weights.bold,
-  },
-  addedButtonText: {
-    color: COLORS.textInverse,
+    fontWeight: FONTS.weights.semiBold,
   },
   helpButton: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: COLORS.surfaceAlt,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -1267,35 +1200,18 @@ const styles = StyleSheet.create({
   helpButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONTS.sizes.sm,
-    fontWeight: FONTS.weights.bold,
-  },
-  deliveryEstimate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.info + '20',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  estimateIcon: {
-    fontSize: FONTS.sizes.sm,
-    marginRight: 8,
-  },
-  estimateText: {
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.info,
     fontWeight: FONTS.weights.medium,
   },
   progressIndicator: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: CARD_PADDING,
+    paddingBottom: CARD_PADDING,
   },
   progressTrack: {
     height: 4,
     backgroundColor: COLORS.border,
     borderRadius: 2,
-    marginBottom: 8,
+    marginBottom: 6,
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
@@ -1304,7 +1220,6 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    fontWeight: FONTS.weights.medium,
     textAlign: 'center',
   },
 
@@ -1314,16 +1229,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
   },
-  statusIcon: {
-    fontSize: FONTS.sizes.sm,
+  statusIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.textInverse,
     marginRight: 6,
   },
   statusText: {
     fontSize: FONTS.sizes.xs,
-    fontWeight: FONTS.weights.bold,
-    letterSpacing: 0.5,
+    fontWeight: FONTS.weights.semiBold,
+    color: COLORS.textInverse,
   },
 
   // Empty State
@@ -1332,15 +1250,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 80,
+    paddingVertical: 60,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyIcon: {
-    fontSize: 80,
-    marginBottom: 24,
+    fontSize: 40,
   },
   emptyTitle: {
     fontSize: FONTS.sizes.xl,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.semiBold,
     color: COLORS.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
@@ -1349,27 +1275,19 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.base,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: FONTS.sizes.base * 1.5,
     marginBottom: 32,
   },
   exploreButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  exploreGradient: {
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 32,
-    paddingVertical: 16,
-    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   exploreButtonText: {
     color: COLORS.textInverse,
     fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.semiBold,
   },
 
   // Loading State
@@ -1377,10 +1295,87 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
   },
   loadingText: {
     fontSize: FONTS.sizes.base,
     color: COLORS.textSecondary,
     fontWeight: FONTS.weights.medium,
+    textAlign: 'center',
+  },
+
+  // Skeleton Loading Styles
+  skeletonCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    marginBottom: CARD_MARGIN,
+    padding: CARD_PADDING,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  skeletonContent: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  skeletonImage: {
+    width: isTablet ? 120 : 90,
+    height: isTablet ? 120 : 90,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceAlt,
+    marginRight: 16,
+  },
+  skeletonDetails: {
+    flex: 1,
+  },
+  skeletonText: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  skeletonOrderNumber: {
+    width: 100,
+    height: 16,
+  },
+  skeletonBadge: {
+    width: 80,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  skeletonTitle: {
+    width: '100%',
+    height: 20,
+  },
+  skeletonDescription: {
+    width: '80%',
+    height: 16,
+  },
+  skeletonPrice: {
+    width: '60%',
+    height: 18,
+  },
+  skeletonActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  skeletonButton: {
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  skeletonButtonLarge: {
+    flex: 2,
+  },
+  skeletonButtonSmall: {
+    flex: 1,
   },
 });

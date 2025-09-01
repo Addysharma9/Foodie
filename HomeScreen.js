@@ -18,16 +18,44 @@ import {
   Alert,
 } from 'react-native';
 import FloatingGirlAssistant from './Animatedgirl';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCart } from './hooks/useCart';
-// Add this helper function at the top
+
+// Responsive dimensions
+const { width, height } = Dimensions.get('window');
+const isTablet = width > 768;
+const isLargeScreen = width > 414;
+
+// Responsive measurements
+const SCREEN_PADDING = width * 0.04;
+const CARD_SPACING = width * 0.03;
+const BORDER_RADIUS = {
+  small: 8,
+  medium: 12,
+  large: 16,
+  xlarge: 20,
+};
+
+// Responsive font sizes
+const FONT_SCALE = Math.min(width / 375, 1.2); // Base on iPhone 11 Pro
+const FONTS = {
+  xs: 12 * FONT_SCALE,
+  sm: 14 * FONT_SCALE,
+  base: 16 * FONT_SCALE,
+  lg: 18 * FONT_SCALE,
+  xl: 20 * FONT_SCALE,
+  xxl: 24 * FONT_SCALE,
+  xxxl: 28 * FONT_SCALE,
+};
+
+const baseURL = 'http://212.38.94.189:8000';
+
+// Helper function at the top
 const formatPrice = (amount) => {
   return parseFloat(amount || 0).toFixed(2);
 };
-
-const { width, height } = Dimensions.get('window');
-const baseURL = 'http://212.38.94.189:8000';
 
 // Enhanced image helper function
 const getImageUrl = (imagePath) => {
@@ -39,7 +67,6 @@ const getImageUrl = (imagePath) => {
   return `${baseURL}/storage/${imagePath}`;
 };
 
-// Swiggy-inspired color palette
 const COLORS = {
   // Swiggy brand colors
   primary: '#FC8019',        // Swiggy orange
@@ -77,7 +104,27 @@ const COLORS = {
   gradientEnd: '#FF3008',
 };
 
-// Skeleton Components
+
+
+
+
+
+
+
+
+
+
+
+// Helper function for address formatting
+const formatAddress = (address) => {
+  if (!address) return 'Select Location';
+  if (address.length > 35) {
+    return address.substring(0, 32) + '...';
+  }
+  return address;
+};
+
+// Enhanced Skeleton Components
 const Pulse = ({ style }) => {
   const pulseValue = useRef(new Animated.Value(0.3)).current;
   
@@ -99,6 +146,11 @@ const Pulse = ({ style }) => {
     pulseAnimation.start();
     return () => pulseAnimation.stop();
   }, [pulseValue]);
+
+  const opacity = pulseValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
 
   return (
     <Animated.View
@@ -125,7 +177,55 @@ const SkeletonCard = ({ height = 120, borderRadius = 14, style }) => (
   <Pulse style={[{ height, borderRadius }, style]} />
 );
 
-// Product Detail Modal with API integration
+// Address Dropdown Modal Component
+const AddressDropdownModal = ({ visible, addresses, selectedId, onSelect, onClose }) => {
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <TouchableOpacity 
+        style={styles.addressModalOverlay} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <View style={styles.addressDropdown}>
+          <View style={styles.addressDropdownHeader}>
+            <Text style={styles.addressDropdownTitle}>Select Address</Text>
+            <TouchableOpacity onPress={onClose} style={styles.addressCloseButton}>
+              <Text style={styles.addressCloseText}>×</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.addressList} showsVerticalScrollIndicator={false}>
+            {addresses.map((address) => (
+              <TouchableOpacity
+                key={address.id}
+                style={[
+                  styles.addressItem,
+                  selectedId === address.id && styles.selectedAddressItem
+                ]}
+                onPress={() => onSelect(address)}
+              >
+                <View style={styles.addressItemContent}>
+                  <View style={styles.addressTypeContainer}>
+                    <Text style={styles.addressType}>{address.type}</Text>
+                    {selectedId === address.id && (
+                      <Text style={styles.selectedIndicator}>✓</Text>
+                    )}
+                  </View>
+                  <Text style={styles.addressFullText}>{address.full_address}</Text>
+                  <Text style={styles.addressArea}>{address.area}, {address.city}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+// Product Detail Modal with Professional Design
 const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart }) => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -140,7 +240,6 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
 
   if (!visible || !product) return null;
 
-  // Safely access cartItems array
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   const existingCartItem = safeCartItems.find(item => item.id === product.id);
   const currentQuantity = existingCartItem?.quantity || 0;
@@ -156,7 +255,7 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
       
       if (result.success) {
         onClose();
-        Alert.alert('Added to Cart', `${product.name} added successfully!`);
+        Alert.alert('Success', `${product.name} added to cart successfully!`);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -200,7 +299,7 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
 
         <ScrollView style={styles.productModalContent} showsVerticalScrollIndicator={false}>
           <View style={styles.productImageContainer}>
-            {!imageLoaded && <SkeletonCard height={250} borderRadius={0} style={{ width: '100%' }} />}
+            {!imageLoaded && <SkeletonCard height={height * 0.3} borderRadius={0} style={{ width: '100%' }} />}
             {imageUri && (
               <Image
                 source={{ uri: imageUri }}
@@ -229,17 +328,26 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
 
             <View style={styles.productMeta}>
               <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🕒</Text>
+                <View style={styles.metaIconContainer}>
+                  <Text style={styles.metaIcon}>🕒</Text>
+                </View>
+                <Text style={styles.metaLabel}>Prep Time</Text>
                 <Text style={styles.metaText}>{product.preparation_time || 25} mins</Text>
               </View>
               {product.spice_level && product.spice_level !== 'None' && (
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaIcon}>🌶️</Text>
+                  <View style={styles.metaIconContainer}>
+                    <Text style={styles.metaIcon}>🌶️</Text>
+                  </View>
+                  <Text style={styles.metaLabel}>Spice Level</Text>
                   <Text style={styles.metaText}>{product.spice_level}</Text>
                 </View>
               )}
               <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🌟</Text>
+                <View style={styles.metaIconContainer}>
+                  <Text style={styles.metaIcon}>🌟</Text>
+                </View>
+                <Text style={styles.metaLabel}>Category</Text>
                 <Text style={styles.metaText}>{product.is_featured ? 'Featured' : 'Popular'}</Text>
               </View>
             </View>
@@ -369,8 +477,7 @@ const FloatingCart = ({ cartItems, cartTotal, onPress, onClose, syncing }) => {
   );
 };
 
-// Enhanced Cart Modal with Coupon and API integration
-// Enhanced Cart Modal with Coupon and API integration - FIXED HOOKS
+// Enhanced Cart Modal with Professional Design
 const CartModal = ({ 
   visible, 
   cartItems, 
@@ -387,7 +494,7 @@ const CartModal = ({
   placeOrder,
   loading
 }) => {
-  const navigation = useNavigation(); // Add this line
+  const navigation = useNavigation();
   const [couponCode, setCouponCode] = useState('');
   const [showCouponInput, setShowCouponInput] = useState(false);
 
@@ -396,10 +503,6 @@ const CartModal = ({
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
   const handlePlaceOrder = async () => {
-    console.log('handlePlaceOrder called'); // For debugging
-    console.log('Navigation object:', navigation); // For debugging
-    
-    // Navigate to Order Placement Screen with cart data
     navigation.navigate('OrderPlacement', {
       cartItems: safeCartItems,
       cartTotal: cartTotal,
@@ -408,8 +511,7 @@ const CartModal = ({
       couponDiscount: couponDiscount,
       appliedCoupon: appliedCoupon
     });
-    
-    onClose(); // Close the cart modal
+    onClose();
   };
 
   const handleApplyCoupon = async () => {
@@ -425,7 +527,6 @@ const CartModal = ({
     }
   };
 
-  // Pre-create components to avoid useState in map
   const CartItemRow = ({ item }) => {
     const [loaded, setLoaded] = useState(false);
     const uri = getImageUrl(item.featured_image || item.imageUrl);
@@ -433,7 +534,7 @@ const CartModal = ({
     return (
       <View key={`${item.id}-${item.slug || 'item'}`} style={styles.cartItemRow}>
         <View style={styles.cartItemImageContainer}>
-          {!loaded && <SkeletonCard height={60} borderRadius={10} style={{ width: 60 }} />}
+          {!loaded && <SkeletonCard height={60} borderRadius={BORDER_RADIUS.medium} style={{ width: 60 }} />}
           {uri && (
             <Image
               source={{ uri }}
@@ -446,7 +547,7 @@ const CartModal = ({
         <View style={styles.cartItemInfo}>
           <Text style={styles.cartItemName}>{item.name}</Text>
           {item.spice_level && item.spice_level !== 'None' && (
-            <Text style={styles.cartItemSpice}>🌶️ {item.spice_level}</Text>
+            <Text style={styles.cartItemSpice}>Spice Level: {item.spice_level}</Text>
           )}
           <View style={styles.priceContainer}>
             <Text style={styles.cartItemPrice}>₹{item.price}</Text>
@@ -583,17 +684,16 @@ const CartModal = ({
   );
 };
 
-// Bottom Tabs
+// Bottom Tabs Component
 const BottomTabs = ({ activeTab, cartCount }) => {
   const navigation = useNavigation();
   
-// In your existing HomeScreen.js, update the tabs array:
-const tabs = [
-  { id: 'delivery', label: 'Home', icon: '🏠', activeColor: COLORS.primary, onPress: () => navigation.replace('Home') },
-  { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.primary, onPress: () => navigation.replace('Profile') },
-  { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.primary, onPress: () => {} },
-  { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.primary, onPress: () => navigation.replace('MyOrder') }, // ✅ Updated
-];
+  const tabs = [
+    { id: 'delivery', label: 'Home', icon: '🏠', activeColor: COLORS.primary, onPress: () => navigation.replace('Home') },
+    { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.primary, onPress: () => navigation.replace('Profile') },
+    { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.primary, onPress: () => {} },
+    { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.primary, onPress: () => navigation.replace('MyOrder') },
+  ];
 
   return (
     <View style={styles.bottomTabContainer}>
@@ -625,7 +725,7 @@ const tabs = [
   );
 };
 
-// Memoized Item Components
+// Responsive Category Item Component
 const CategoryItem = React.memo(({ item, onPress, isSelected }) => {
   const [loaded, setLoaded] = useState(false);
   
@@ -634,7 +734,7 @@ const CategoryItem = React.memo(({ item, onPress, isSelected }) => {
       <TouchableOpacity onPress={() => onPress(item.id, item.name)} activeOpacity={0.7}>
         <View style={[styles.categoryCard, isSelected && styles.selectedCategoryCard]}>
           <View style={[styles.categoryIcon, isSelected && styles.selectedCategoryIcon]}>
-            {!loaded && <SkeletonCard height={50} borderRadius={16} style={{ width: 50 }} />}
+            {!loaded && <SkeletonCard height={isTablet ? 70 : 50} borderRadius={16} style={{ width: isTablet ? 70 : 50 }} />}
             <Image
               source={{ uri: getImageUrl(item.image) }}
               style={[styles.categoryImage, !loaded && { opacity: 0, position: 'absolute' }]}
@@ -651,6 +751,7 @@ const CategoryItem = React.memo(({ item, onPress, isSelected }) => {
   );
 });
 
+// Responsive Recommended Card Component  
 const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 150;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -658,6 +759,8 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+
+  const cardWidth = (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2;
 
   const handleAdd = async (e) => {
     e.stopPropagation();
@@ -672,9 +775,9 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
   };
 
   return (
-    <TouchableOpacity style={styles.recommendedCard} onPress={() => onPress(item)} activeOpacity={0.9}>
+    <TouchableOpacity style={[styles.recommendedCard, { width: cardWidth }]} onPress={() => onPress(item)} activeOpacity={0.9}>
       <View style={styles.recommendedImageContainer}>
-        {!loaded && <SkeletonCard height={120} borderRadius={0} />}
+        {!loaded && <SkeletonCard height={cardWidth * 0.7} borderRadius={0} />}
         <Image
           source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
           style={[styles.recommendedImage, !loaded && { opacity: 0, position: 'absolute' }]}
@@ -698,7 +801,7 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
       <View style={styles.recommendedInfo}>
         <Text style={styles.recommendedName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.cuisineType}>
-          {item.spice_level && item.spice_level !== 'None' ? `🌶️ ${item.spice_level}` : 'Delicious Food'}
+          {item.spice_level && item.spice_level !== 'None' ? `Spice: ${item.spice_level}` : 'Delicious Food'}
         </Text>
         <View style={styles.recommendedFooter}>
           <View style={styles.priceContainer}>
@@ -711,7 +814,7 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
             disabled={adding}
           >
             <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING...' : (inCart ? `IN CART (${quantity})` : 'ADD')}
+              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -720,6 +823,7 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
   );
 });
 
+// Responsive Top Section Card Component
 const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 180;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -727,6 +831,8 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+
+  const cardWidth = width * (isTablet ? 0.45 : 0.7);
 
   const handleAdd = async (e) => {
     e.stopPropagation();
@@ -741,9 +847,9 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
   };
 
   return (
-    <TouchableOpacity style={styles.topSectionCard} onPress={() => onPress(item)} activeOpacity={0.9}>
+    <TouchableOpacity style={[styles.topSectionCard, { width: cardWidth }]} onPress={() => onPress(item)} activeOpacity={0.9}>
       <View style={styles.topSectionImageContainer}>
-        {!loaded && <SkeletonCard height={140} borderRadius={0} />}
+        {!loaded && <SkeletonCard height={cardWidth * 0.6} borderRadius={0} />}
         <Image
           source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
           style={[styles.topSectionImage, !loaded && { opacity: 0, position: 'absolute' }]}
@@ -764,11 +870,11 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
       <View style={styles.topSectionInfo}>
         <Text style={styles.topSectionName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.cuisineType}>
-          {item.is_featured ? '⭐ Featured Item' : 'Popular Choice'}
+          {item.is_featured ? 'Featured Item' : 'Popular Choice'}
         </Text>
         <View style={styles.cardFooter}>
           <View style={styles.deliveryInfo}>
-            <Text style={styles.deliveryText}>🕐 {item.preparation_time || 30} mins</Text>
+            <Text style={styles.deliveryText}>{item.preparation_time || 30} mins</Text>
             <View style={styles.priceContainer}>
               <Text style={styles.priceText}>₹{displayPrice}</Text>
               {hasDiscount && <Text style={styles.originalPriceText}>₹{item.price}</Text>}
@@ -780,7 +886,7 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
             disabled={adding}
           >
             <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING...' : (inCart ? `IN CART (${quantity})` : 'ADD')}
+              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -789,6 +895,7 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
   );
 });
 
+// Responsive Full Row Card Component
 const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 220;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -796,6 +903,8 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+
+  const imageSize = isTablet ? 120 : 100;
 
   const handleAdd = async (e) => {
     e.stopPropagation();
@@ -811,11 +920,11 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
 
   return (
     <TouchableOpacity style={styles.fullCard} onPress={() => onPress(item)} activeOpacity={0.95}>
-      <View style={styles.fullCardImageContainer}>
-        {!loaded && <SkeletonCard height={100} borderRadius={0} style={{ width: width * 0.28 }} />}
+      <View style={[styles.fullCardImageContainer, { width: imageSize }]}>
+        {!loaded && <SkeletonCard height={imageSize} borderRadius={0} style={{ width: imageSize }} />}
         <Image
           source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
-          style={[styles.fullCardImage, !loaded && { opacity: 0, position: 'absolute' }]}
+          style={[styles.fullCardImage, { width: imageSize, height: imageSize }, !loaded && { opacity: 0, position: 'absolute' }]}
           onLoadEnd={() => setLoaded(true)}
         />
         {hasDiscount && (
@@ -827,7 +936,7 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
       <View style={styles.fullCardContent}>
         <Text style={styles.fullCardName}>{item.name}</Text>
         <Text style={styles.cuisineType}>
-          {item.is_featured ? '👑 Premium Restaurant' : 'Popular Restaurant'}
+          {item.is_featured ? 'Premium Restaurant' : 'Popular Restaurant'}
         </Text>
         <View style={styles.fullCardMeta}>
           <View style={styles.fullCardLeft}>
@@ -837,7 +946,7 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
               </View>
             )}
             <View style={styles.deliveryPriceRow}>
-              <Text style={styles.deliveryText}>• {item.preparation_time || 25} mins</Text>
+              <Text style={styles.deliveryText}>{item.preparation_time || 25} mins</Text>
               <View style={styles.priceContainer}>
                 <Text style={styles.priceText}>₹{displayPrice}</Text>
                 {hasDiscount && <Text style={styles.originalPriceText}>₹{item.price}</Text>}
@@ -850,7 +959,7 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
             disabled={adding}
           >
             <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING...' : (inCart ? `IN CART (${quantity})` : 'ADD')}
+              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -859,7 +968,7 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
   );
 });
 
-// Main Component with full API integration
+// Main Component with enhanced professional design
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeSlide, setActiveSlide] = useState(0);
@@ -874,10 +983,72 @@ export default function HomeScreen() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
 
-  // Use the enhanced cart hook with error handling
+  // Address state
+  const [addressnow, setaddressnow] = useState('Select Location');
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [allAddresses, setAllAddresses] = useState([]);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
   const cartHookResult = useCart();
-  
-  // Safely destructure cart hook results with defaults
+
+  // Enhanced address fetching
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        setLoadingAddresses(true);
+        const email = await AsyncStorage.getItem('@user_email');
+        
+        if (!email) {
+          setaddressnow('Select Location');
+          return;
+        }
+        
+        const response = await fetch(`${baseURL}/api/address`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          
+          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+            setAllAddresses(result.data);
+            const homeAddress = result.data.find(addr => addr.type.toLowerCase() === 'home') || result.data[0];
+            setSelectedAddressId(homeAddress.id);
+            setaddressnow(homeAddress.full_address || homeAddress.area || 'Address found');
+          } else {
+            setaddressnow('No address found');
+          }
+        } else {
+          setaddressnow('Location not available');
+        }
+      } catch (error) {
+        console.error('Error fetching addresses:', error);
+        setaddressnow('Location error');
+      } finally {
+        setLoadingAddresses(false);
+      }
+    };
+    
+    fetchAddresses();
+  }, []);
+
+  // Address handlers
+  const handleAddressSelect = (address) => {
+    setSelectedAddressId(address.id);
+    setaddressnow(address.full_address || address.area || 'Address');
+    setShowAddressDropdown(false);
+  };
+
+  const handleAddressDropdownToggle = () => {
+    if (allAddresses.length > 1) {
+      setShowAddressDropdown(true);
+    }
+  };
+
+  // Cart hook with safe destructuring
   const {
     cartItems = [],
     cartCount = 0,
@@ -927,13 +1098,11 @@ export default function HomeScreen() {
   }, [selectedCategoryId]);
 
   useEffect(() => {
-    // Refresh cart when screen gains focus
     const unsubscribe = navigation.addListener('focus', () => {
       if (Array.isArray(cartItems) && cartItems.length > 0) {
         refreshCart();
       }
     });
-
     return unsubscribe;
   }, [navigation, cartItems]);
 
@@ -978,7 +1147,6 @@ export default function HomeScreen() {
     try {
       setSectionsLoading(true);
       const sectionsResponse = await fetch(`${baseURL}/api/home-sections/${categoryId}`);
-      console.log("Logs: ",sectionsResponse);
       
       if (sectionsResponse.ok) {
         const sectionsData = await sectionsResponse.json();
@@ -1029,11 +1197,11 @@ export default function HomeScreen() {
   const handleCartPress = () => setShowCartModal(true);
   const handleCloseCart = () => clearCart();
 
-  // Skeleton Components
+  // Enhanced Skeleton Components
   const BannerSkeleton = () => (
     <View style={{ marginVertical: 16 }}>
-      <View style={{ paddingHorizontal: 20 }}>
-        <SkeletonCard height={180} borderRadius={16} style={{ width: width - 40 }} />
+      <View style={{ paddingHorizontal: SCREEN_PADDING }}>
+        <SkeletonCard height={height * 0.22} borderRadius={BORDER_RADIUS.large} style={{ width: width - (SCREEN_PADDING * 2) }} />
       </View>
       <View style={styles.dotsContainer}>
         {[0, 1, 2].map(i => <SkeletonCircle key={i} size={6} style={{ marginHorizontal: 3 }} />)}
@@ -1043,103 +1211,103 @@ export default function HomeScreen() {
 
   const CategoriesSkeleton = () => (
     <View style={[styles.section, { paddingVertical: 8 }]}>
-      <SkeletonLine height={20} width={180} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.categoriesContainer, { paddingTop: 10 }]}>
+      <SkeletonLine height={FONTS.xl} width={isTablet ? 220 : 180} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.categoriesContainer, { paddingTop: 16 }]}>
         {[...Array(6)].map((_, i) => (
-          <View key={`cat-skel-${i}`} style={{ alignItems: 'center', marginRight: 24 }}>
-            <SkeletonCard height={64} borderRadius={20} style={{ width: 64 }} />
-            <SkeletonLine height={10} width={50} style={{ marginTop: 8 }} />
+          <View key={`cat-skel-${i}`} style={{ alignItems: 'center', marginRight: isTablet ? 32 : 24 }}>
+            <SkeletonCard height={isTablet ? 70 : 64} borderRadius={20} style={{ width: isTablet ? 70 : 64 }} />
+            <SkeletonLine height={FONTS.sm} width={50} style={{ marginTop: 8 }} />
           </View>
         ))}
       </ScrollView>
     </View>
   );
 
-  const RecommendedSkeleton = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View>
-          <SkeletonLine height={18} width={160} />
-          <SkeletonLine height={12} width={100} style={{ marginTop: 6 }} />
+  const RecommendedSkeleton = () => {
+    const cardWidth = (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2;
+    
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
+            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+        <View style={styles.recommendedContainer}>
+          <View style={styles.recommendedRow}>
+            {[...Array(2)].map((_, i) => (
+              <View key={`rec-row1-${i}`} style={[styles.recommendedCard, { width: cardWidth }]}>
+                <SkeletonCard height={cardWidth * 0.7} borderRadius={0} />
+                <View style={{ padding: 12 }}>
+                  <SkeletonLine height={FONTS.sm} width={'80%'} />
+                  <SkeletonLine height={FONTS.xs} width={'40%'} style={{ marginTop: 8 }} />
+                  <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} style={{ marginTop: 12 }} />
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
-      <View style={styles.recommendedContainer}>
-        <View style={styles.recommendedRow}>
-          {[...Array(2)].map((_, i) => (
-            <View key={`rec-row1-${i}`} style={styles.recommendedCard}>
-              <SkeletonCard height={120} borderRadius={0} />
+    );
+  };
+
+  const TopSectionSkeleton = () => {
+    const cardWidth = width * (isTablet ? 0.45 : 0.7);
+    
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
+            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topSectionContainer}>
+          {[...Array(3)].map((_, i) => (
+            <View key={`top-skel-${i}`} style={[styles.topSectionCard, { width: cardWidth, paddingBottom: 12 }]}>
+              <SkeletonCard height={cardWidth * 0.6} borderRadius={0} />
               <View style={{ padding: 12 }}>
-                <SkeletonLine height={12} width={'80%'} />
-                <SkeletonLine height={10} width={'40%'} style={{ marginTop: 8 }} />
-                <SkeletonLine height={30} width={'100%'} borderRadius={10} style={{ marginTop: 12 }} />
+                <SkeletonLine height={FONTS.base} width={'70%'} />
+                <SkeletonLine height={FONTS.xs} width={'50%'} style={{ marginTop: 8 }} />
+                <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} style={{ marginTop: 12 }} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const FullCardSkeleton = () => {
+    const imageSize = isTablet ? 120 : 100;
+    
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
+            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+        <View style={styles.fullCardContainer}>
+          {[...Array(3)].map((_, i) => (
+            <View key={`full-skel-${i}`} style={styles.fullCard}>
+              <SkeletonCard height={imageSize} borderRadius={0} style={{ width: imageSize }} />
+              <View style={styles.fullCardContent}>
+                <SkeletonLine height={FONTS.base} width={'70%'} />
+                <View style={styles.fullCardMeta}>
+                  <SkeletonLine height={FONTS.xs} width={60} />
+                  <SkeletonLine height={FONTS.sm} width={80} />
+                </View>
+                <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} />
               </View>
             </View>
           ))}
         </View>
-        <View style={[styles.recommendedRow, { marginTop: 16 }]}>
-          {[...Array(2)].map((_, i) => (
-            <View key={`rec-row2-${i}`} style={styles.recommendedCard}>
-              <SkeletonCard height={120} borderRadius={0} />
-              <View style={{ padding: 12 }}>
-                <SkeletonLine height={12} width={'80%'} />
-                <SkeletonLine height={10} width={'40%'} style={{ marginTop: 8 }} />
-                <SkeletonLine height={30} width={'100%'} borderRadius={10} style={{ marginTop: 12 }} />
-              </View>
-            </View>
-          ))}
-        </View>
       </View>
-    </View>
-  );
-
-  const TopSectionSkeleton = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View>
-          <SkeletonLine height={18} width={160} />
-          <SkeletonLine height={12} width={100} style={{ marginTop: 6 }} />
-        </View>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topSectionContainer}>
-        {[...Array(3)].map((_, i) => (
-          <View key={`top-skel-${i}`} style={[styles.topSectionCard, { paddingBottom: 12 }]}>
-            <SkeletonCard height={140} borderRadius={0} />
-            <View style={{ padding: 12 }}>
-              <SkeletonLine height={14} width={'70%'} />
-              <SkeletonLine height={10} width={'50%'} style={{ marginTop: 8 }} />
-              <SkeletonLine height={30} width={'100%'} borderRadius={10} style={{ marginTop: 12 }} />
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const FullCardSkeleton = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <View>
-          <SkeletonLine height={18} width={160} />
-          <SkeletonLine height={12} width={100} style={{ marginTop: 6 }} />
-        </View>
-      </View>
-      <View style={styles.fullCardContainer}>
-        {[...Array(3)].map((_, i) => (
-          <View key={`full-skel-${i}`} style={styles.fullCard}>
-            <SkeletonCard height={100} borderRadius={0} style={{ width: width * 0.28 }} />
-            <View style={styles.fullCardContent}>
-              <SkeletonLine height={14} width={'70%'} />
-              <View style={styles.fullCardMeta}>
-                <SkeletonLine height={10} width={60} />
-                <SkeletonLine height={12} width={80} />
-              </View>
-              <SkeletonLine height={30} width={'100%'} borderRadius={10} />
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderBanner = ({ item }) => (
     <View style={styles.bannerWrapper}>
@@ -1224,7 +1392,7 @@ export default function HomeScreen() {
               numColumns={2}
               contentContainerStyle={styles.recommendedContainer}
               scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+              ItemSeparatorComponent={() => <View style={{ height: CARD_SPACING }} />}
               columnWrapperStyle={styles.recommendedRow}
             />
           )}
@@ -1249,7 +1417,7 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.topSectionContainer}
-              snapToInterval={width * 0.75}
+              snapToInterval={width * (isTablet ? 0.45 : 0.75)}
               decelerationRate="fast"
             />
           )}
@@ -1281,7 +1449,7 @@ export default function HomeScreen() {
     return null;
   };
 
-  // Show skeleton loading instead of full-screen loader
+  // Show professional loading screen
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -1289,12 +1457,23 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.locationContainer}>
-              <SkeletonLine height={18} width={160} />
+              <TouchableOpacity 
+                style={styles.locationButton} 
+                onPress={handleAddressDropdownToggle}
+                disabled={allAddresses.length <= 1 || loadingAddresses}
+              >
+                <Text style={styles.locationText} numberOfLines={2} ellipsizeMode="tail">
+                  📍 {loadingAddresses ? 'Loading...' : formatAddress(addressnow)}
+                </Text>
+                {allAddresses.length > 1 && !loadingAddresses && (
+                  <Text style={styles.dropdownIcon}>⌄</Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <SkeletonCircle size={36} />
+            <SkeletonCircle size={isTablet ? 44 : 36} />
           </View>
           <View style={styles.searchContainer}>
-            <SkeletonLine height={18} width={'100%'} />
+            <SkeletonLine height={FONTS.sm} width={'100%'} />
           </View>
         </View>
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -1312,15 +1491,24 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
-      {/* Header */}
+      {/* Enhanced Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.locationContainer}>
-            <TouchableOpacity style={styles.locationButton}>
-              <Text style={styles.locationText}>📍 Phagwara, Punjab</Text>
-              <Text style={styles.dropdownIcon}>⌄</Text>
+            <TouchableOpacity 
+              style={styles.locationButton}
+              onPress={handleAddressDropdownToggle}
+              disabled={allAddresses.length <= 1}
+            >
+              <Text style={styles.locationText} numberOfLines={2} ellipsizeMode="tail">
+                📍 {loadingAddresses ? 'Loading...' : formatAddress(addressnow)}
+              </Text>
+              {allAddresses.length > 1 && (
+                <Text style={styles.dropdownIcon}>⌄</Text>
+              )}
             </TouchableOpacity>
           </View>
+
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.profileButton}
@@ -1353,7 +1541,7 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Banner Carousel */}
+        {/* Enhanced Banner Carousel */}
         <Animated.View style={[styles.carouselSection, { opacity: fadeAnim }]}>
           <FlatList
             ref={flatListRef}
@@ -1368,9 +1556,9 @@ export default function HomeScreen() {
               setActiveSlide(idx);
             }}
             viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-            snapToInterval={width - 40}
+            snapToInterval={width - (SCREEN_PADDING * 2)}
             decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 20 }}
+            contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING }}
           />
           <View style={styles.dotsContainer}>
             {banners.map((_, index) => (
@@ -1379,7 +1567,7 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* Categories */}
+        {/* Enhanced Categories */}
         {homeFilters.length > 0 ? (
           <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
             <View style={styles.sectionHeader}>
@@ -1398,7 +1586,7 @@ export default function HomeScreen() {
           <CategoriesSkeleton />
         )}
 
-        {/* Dynamic Sections */}
+        {/* Enhanced Dynamic Sections */}
         {sections.length > 0 ? (
           sections.map((section, index) => renderSection(section, index))
         ) : (
@@ -1410,7 +1598,7 @@ export default function HomeScreen() {
             </>
           ) : (
             <View style={styles.noSectionsContainer}>
-              <Text style={styles.noSectionsText}>🍽️ Discover amazing restaurants in your area</Text>
+              <Text style={styles.noSectionsText}>Discover amazing restaurants in your area</Text>
             </View>
           )
         )}
@@ -1453,15 +1641,24 @@ export default function HomeScreen() {
         navigation={navigation} 
       />
 
+      {/* Address Dropdown Modal */}
+      <AddressDropdownModal
+        visible={showAddressDropdown}
+        addresses={allAddresses}
+        selectedId={selectedAddressId}
+        onSelect={handleAddressSelect}
+        onClose={() => setShowAddressDropdown(false)}
+      />
+
       {/* Bottom Tabs */}
       <BottomTabs activeTab={activeTab} cartCount={cartCount} />
 
       {/* Floating Girl Assistant */}
       <FloatingGirlAssistant
         defaultVisible={true}
-        size={72}
+        size={isTablet ? 80 : 60}
         startDock="right"
-        bottomOffset={96}
+        bottomOffset={Platform.OS === 'ios' ? 120 : 96}
         snapToEdges={true}
         bubbleMode="reposition"
       />
@@ -1469,19 +1666,18 @@ export default function HomeScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
 
-  // Header Styles
+  // Enhanced Header Styles
   header: {
     backgroundColor: COLORS.background,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: Platform.OS === 'ios' ? 8 : 12,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     elevation: 2,
@@ -1494,7 +1690,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   locationContainer: {
     flex: 1,
@@ -1504,13 +1700,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationText: {
-    fontSize: 16,
+    fontSize: FONTS.base,
     fontWeight: '700',
     color: COLORS.text,
-    marginRight: 6,
+    marginRight: 8,
   },
   dropdownIcon: {
-    fontSize: 14,
+    fontSize: FONTS.sm,
     color: COLORS.primary,
     fontWeight: 'bold',
   },
@@ -1520,17 +1716,22 @@ const styles = StyleSheet.create({
   },
   profileButton: {},
   profileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: isTablet ? 44 : 36,
+    height: isTablet ? 44 : 36,
+    borderRadius: isTablet ? 22 : 18,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+    elevation: 1,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   profileIconText: {
-    fontSize: 18,
+    fontSize: FONTS.lg,
     color: COLORS.text,
     fontWeight: '700',
   },
@@ -1538,20 +1739,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: isTablet ? 16 : 12,
+    borderRadius: BORDER_RADIUS.medium,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   searchIcon: {
-    fontSize: 16,
+    fontSize: FONTS.base,
     marginRight: 12,
     color: COLORS.textSecondary,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 14,
+    fontSize: FONTS.sm,
     color: COLORS.textSecondary,
     fontWeight: '400',
   },
@@ -1561,21 +1762,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: Platform.OS === 'ios' ? 140 : 120,
   },
 
-  // Banner Styles
+  // Enhanced Banner Styles
   carouselSection: {
-    marginVertical: 16,
+    marginVertical: isTablet ? 24 : 16,
   },
   bannerWrapper: {
-    width: width - 40,
+    width: width - (SCREEN_PADDING * 2),
     paddingHorizontal: 4,
   },
   bannerCard: {
-    borderRadius: 16,
+    borderRadius: BORDER_RADIUS.large,
     overflow: 'hidden',
-    height: 180,
+    height: height * 0.22,
     elevation: 3,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
@@ -1584,40 +1785,40 @@ const styles = StyleSheet.create({
   },
   bannerContent: {
     flex: 1,
-    padding: 20,
+    padding: isTablet ? 24 : 20,
     justifyContent: 'center',
   },
   bannerLeft: {
     flex: 1,
   },
   bannerEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: isTablet ? 32 : 24,
+    marginBottom: isTablet ? 12 : 8,
   },
   bannerTitle: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
     fontWeight: '800',
     color: COLORS.textInverse,
     marginBottom: 4,
     letterSpacing: 0.2,
   },
   bannerSubtitle: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 12,
+    marginBottom: isTablet ? 16 : 12,
   },
   bannerButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: isTablet ? 20 : 16,
+    paddingVertical: isTablet ? 12 : 8,
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
   bannerButtonText: {
     color: COLORS.textInverse,
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -1638,37 +1839,37 @@ const styles = StyleSheet.create({
     width: 16,
   },
 
-  // Section Styles
+  // Enhanced Section Styles
   section: {
-    marginBottom: 24,
-    paddingHorizontal: 16,
+    marginBottom: isTablet ? 32 : 24,
+    paddingHorizontal: SCREEN_PADDING,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: isTablet ? 20 : 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
     fontWeight: '800',
     color: COLORS.text,
     marginBottom: 4,
     letterSpacing: 0.2,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.textSecondary,
     fontWeight: '400',
   },
 
-  // Category Styles
+  // Enhanced Category Styles
   categoriesContainer: {
     paddingVertical: 8,
   },
   categoryItem: {
     alignItems: 'center',
-    marginRight: 24,
+    marginRight: isTablet ? 32 : 24,
   },
   categoryCard: {
     alignItems: 'center',
@@ -1678,9 +1879,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   categoryIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 40,
+    width: isTablet ? 70 : 64,
+    height: isTablet ? 70 : 64,
+    borderRadius: isTablet ? 35 : 32,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1688,22 +1889,28 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.border,
     overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   selectedCategoryIcon: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
   },
   categoryImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 30,
+    width: isTablet ? 60 : 50,
+    height: isTablet ? 60 : 50,
+    borderRadius: isTablet ? 30 : 25,
     resizeMode: 'cover',
   },
   categoryName: {
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     color: COLORS.text,
     fontWeight: '700',
     textAlign: 'center',
+    maxWidth: isTablet ? 80 : 64,
   },
   selectedCategoryName: {
     color: COLORS.primary,
@@ -1718,7 +1925,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // Recommended Card Styles
+  // Enhanced Recommended Card Styles
   recommendedContainer: {
     paddingVertical: 8,
   },
@@ -1727,8 +1934,7 @@ const styles = StyleSheet.create({
   },
   recommendedCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    width: (width - 48) / 2,
+    borderRadius: BORDER_RADIUS.large,
     overflow: 'hidden',
     elevation: 2,
     shadowColor: COLORS.shadow,
@@ -1737,6 +1943,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: CARD_SPACING,
   },
   recommendedImageContainer: {
     position: 'relative',
@@ -1784,21 +1991,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   deliveryTimeText: {
-    fontSize: 10,
+    fontSize: FONTS.xs,
     fontWeight: '700',
     color: COLORS.textInverse,
   },
   recommendedInfo: {
-    padding: 12,
+    padding: isTablet ? 16 : 12,
   },
   recommendedName: {
-    fontSize: 14,
+    fontSize: FONTS.sm,
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
   },
   cuisineType: {
-    fontSize: 12,
+    fontSize: FONTS.xs,
     color: COLORS.textSecondary,
     marginBottom: 8,
   },
@@ -1813,26 +2020,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   priceText: {
-    fontSize: 14,
+    fontSize: FONTS.sm,
     color: COLORS.primary,
     fontWeight: '800',
   },
   originalPriceText: {
-    fontSize: 12,
+    fontSize: FONTS.xs,
     color: COLORS.textSecondary,
     textDecorationLine: 'line-through',
     marginLeft: 4,
   },
 
-  // Top Section Card Styles
+  // Enhanced Top Section Card Styles
   topSectionContainer: {
     paddingVertical: 8,
   },
   topSectionCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    marginRight: 16,
-    width: width * 0.7,
+    borderRadius: BORDER_RADIUS.large,
+    marginRight: CARD_SPACING,
     overflow: 'hidden',
     elevation: 2,
     shadowColor: COLORS.shadow,
@@ -1862,7 +2068,7 @@ const styles = StyleSheet.create({
   },
   offerText: {
     color: COLORS.textInverse,
-    fontSize: 10,
+    fontSize: FONTS.xs,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -1877,14 +2083,14 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     color: COLORS.textInverse,
-    fontSize: 10,
+    fontSize: FONTS.xs,
     fontWeight: '700',
   },
   topSectionInfo: {
-    padding: 12,
+    padding: isTablet ? 16 : 12,
   },
   topSectionName: {
-    fontSize: 16,
+    fontSize: FONTS.base,
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
@@ -1899,7 +2105,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deliveryText: {
-    fontSize: 12,
+    fontSize: FONTS.xs,
     color: COLORS.textSecondary,
     marginBottom: 2,
   },
@@ -1909,14 +2115,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  // Full Card Styles
+  // Enhanced Full Card Styles
   fullCardContainer: {
     paddingVertical: 8,
   },
   fullCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    marginBottom: 16,
+    borderRadius: BORDER_RADIUS.large,
+    marginBottom: CARD_SPACING,
     overflow: 'hidden',
     flexDirection: 'row',
     elevation: 2,
@@ -1929,11 +2135,8 @@ const styles = StyleSheet.create({
   },
   fullCardImageContainer: {
     position: 'relative',
-    width: width * 0.28,
   },
   fullCardImage: {
-    width: '100%',
-    height: 100,
     resizeMode: 'cover',
   },
   fullCardOfferBadge: {
@@ -1947,11 +2150,11 @@ const styles = StyleSheet.create({
   },
   fullCardContent: {
     flex: 1,
-    padding: 12,
+    padding: isTablet ? 16 : 12,
     justifyContent: 'space-between',
   },
   fullCardName: {
-    fontSize: 16,
+    fontSize: FONTS.base,
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
@@ -1974,34 +2177,40 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // Add Button Styles
+  // Enhanced Add Button Styles
   addButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingVertical: isTablet ? 10 : 8,
+    paddingHorizontal: isTablet ? 16 : 14,
     alignItems: 'center',
     elevation: 2,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+      shadowOpacity: 0.15,
     shadowRadius: 3,
+  },
+  addedButton: {
+    backgroundColor: COLORS.success,
   },
   addButtonText: {
     color: COLORS.textInverse,
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  addedButtonText: {
+    color: COLORS.textInverse,
   },
 
   // No Sections Container
   noSectionsContainer: {
-    padding: 40,
+    padding: isTablet ? 60 : 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   noSectionsText: {
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     color: COLORS.textSecondary,
     fontWeight: '600',
     textAlign: 'center',
@@ -2024,7 +2233,7 @@ const styles = StyleSheet.create({
   },
   bottomTabs: {
     flexDirection: 'row',
-    paddingVertical: 8,
+    paddingVertical: isTablet ? 12 : 8,
     paddingBottom: Platform.OS === 'ios' ? 20 : 8,
   },
   tabButton: {
@@ -2040,10 +2249,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.12 }],
   },
   tabIcon: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '700',
   },
   tabBadge: {
@@ -2061,24 +2270,24 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: {
     color: COLORS.textInverse,
-    fontSize: 9,
+    fontSize: isTablet ? FONTS.xs - 1 : 9,
     fontWeight: '800',
   },
 
   // Floating Cart Styles
   floatingCartContainer: {
     position: 'absolute',
-    bottom: 90,
-    left: 16,
-    right: 16,
+    bottom: Platform.OS === 'ios' ? 110 : 90,
+    left: SCREEN_PADDING,
+    right: SCREEN_PADDING,
     zIndex: 1000,
     elevation: 10,
   },
   floatingCart: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderRadius: BORDER_RADIUS.large,
+    paddingVertical: isTablet ? 20 : 16,
+    paddingHorizontal: isTablet ? 24 : 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -2096,15 +2305,15 @@ const styles = StyleSheet.create({
   cartItemsCount: {
     backgroundColor: 'rgba(0,0,0,0.2)',
     borderRadius: 8,
-    width: 32,
-    height: 32,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   cartItemsCountText: {
     color: COLORS.textInverse,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '800',
   },
   cartInfo: {
@@ -2112,13 +2321,13 @@ const styles = StyleSheet.create({
   },
   cartItemsText: {
     color: COLORS.textInverse,
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     fontWeight: '800',
     marginBottom: 2,
   },
   cartExtraText: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 11,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '500',
   },
   cartRight: {
@@ -2126,13 +2335,13 @@ const styles = StyleSheet.create({
   },
   cartTotal: {
     color: COLORS.textInverse,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '800',
     marginBottom: 2,
   },
   cartViewText: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -2142,8 +2351,8 @@ const styles = StyleSheet.create({
     right: -8,
     backgroundColor: COLORS.background,
     borderRadius: 16,
-    width: 32,
-    height: 32,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: COLORS.shadow,
@@ -2156,7 +2365,7 @@ const styles = StyleSheet.create({
   },
   closeCartText: {
     color: COLORS.primary,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '800',
   },
 
@@ -2172,10 +2381,12 @@ const styles = StyleSheet.create({
     zIndex: 2000,
     elevation: 20,
   },
+
+  // Cart Modal Styles
   cartModal: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: BORDER_RADIUS.xlarge,
+    borderTopRightRadius: BORDER_RADIUS.xlarge,
     maxHeight: height * 0.8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 0,
   },
@@ -2183,19 +2394,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: isTablet ? 24 : 20,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   cartModalTitle: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
     fontWeight: '800',
     color: COLORS.text,
   },
   modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    borderRadius: isTablet ? 18 : 16,
     backgroundColor: COLORS.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2204,27 +2415,27 @@ const styles = StyleSheet.create({
   },
   modalCloseText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '800',
   },
   cartItemsList: {
     maxHeight: height * 0.4,
-    paddingHorizontal: 20,
+    paddingHorizontal: isTablet ? 24 : 20,
   },
   cartItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: isTablet ? 20 : 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   cartItemImageContainer: {
-    marginRight: 12,
+    marginRight: isTablet ? 16 : 12,
   },
   cartItemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
+    width: isTablet ? 70 : 60,
+    height: isTablet ? 70 : 60,
+    borderRadius: BORDER_RADIUS.medium,
     resizeMode: 'cover',
   },
   cartItemInfo: {
@@ -2232,18 +2443,18 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   cartItemName: {
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
   },
   cartItemSpice: {
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     color: COLORS.textSecondary,
     marginBottom: 2,
   },
   cartItemPrice: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.primary,
     fontWeight: '800',
   },
@@ -2251,38 +2462,120 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 10,
+    borderRadius: BORDER_RADIUS.medium,
     paddingHorizontal: 4,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   quantityButton: {
-    width: 32,
-    height: 32,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
   },
   quantityButtonText: {
-    fontSize: 18,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     fontWeight: '800',
     color: COLORS.primary,
   },
   quantityText: {
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '700',
     color: COLORS.text,
-    marginHorizontal: 12,
+    marginHorizontal: isTablet ? 16 : 12,
     minWidth: 24,
     textAlign: 'center',
   },
   cartModalFooter: {
-    padding: 20,
+    padding: isTablet ? 24 : 20,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+
+  // Coupon Section Styles
+  couponSection: {
+    marginBottom: isTablet ? 24 : 20,
+  },
+  couponButton: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingVertical: isTablet ? 16 : 12,
+    paddingHorizontal: isTablet ? 20 : 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  couponButtonText: {
+    color: COLORS.primary,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+  },
+  couponInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  couponInput: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: isTablet ? 16 : 12,
+    paddingVertical: isTablet ? 16 : 12,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  applyCouponButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: isTablet ? 20 : 16,
+    paddingVertical: isTablet ? 16 : 12,
+  },
+  applyCouponText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '700',
+  },
+  cancelCouponButton: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: isTablet ? 20 : 16,
+    paddingVertical: isTablet ? 16 : 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cancelCouponText: {
+    color: COLORS.textSecondary,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '700',
+  },
+  appliedCouponContainer: {
+    backgroundColor: COLORS.success + '20',
+    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: isTablet ? 20 : 16,
+    paddingVertical: isTablet ? 16 : 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.success,
+  },
+  appliedCouponText: {
+    color: COLORS.success,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '600',
+    flex: 1,
+  },
+  removeCouponText: {
+    color: COLORS.error,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '700',
+  },
+
+  // Cart Summary Styles
   cartSummary: {
-    marginBottom: 20,
+    marginBottom: isTablet ? 24 : 20,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -2301,53 +2594,53 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.textSecondary,
     fontWeight: '600',
   },
   summaryValue: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.text,
     fontWeight: '600',
   },
   summaryLabelTotal: {
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '800',
     color: COLORS.text,
   },
   summaryValueTotal: {
-    fontSize: 18,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     fontWeight: '900',
     color: COLORS.primary,
   },
   cartModalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: isTablet ? 16 : 12,
   },
   clearCartButton: {
     flex: 1,
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingVertical: isTablet ? 18 : 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   clearCartText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     fontWeight: '800',
   },
   checkoutButton: {
     flex: 2,
     backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingVertical: isTablet ? 18 : 14,
     alignItems: 'center',
   },
   checkoutButtonText: {
     color: COLORS.textInverse,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     fontWeight: '900',
     letterSpacing: 0.3,
   },
@@ -2361,15 +2654,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: isTablet ? 16 : 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   modalBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: isTablet ? 44 : 40,
+    height: isTablet ? 44 : 40,
+    borderRadius: isTablet ? 22 : 20,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2377,24 +2670,24 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   modalBackText: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     color: COLORS.text,
     fontWeight: '800',
   },
   productModalTitle: {
-    fontSize: 18,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     fontWeight: '800',
     color: COLORS.text,
   },
   modalPlaceholder: {
-    width: 40,
+    width: isTablet ? 44 : 40,
   },
   productModalContent: {
     flex: 1,
   },
   productImageContainer: {
     position: 'relative',
-    height: 250,
+    height: height * 0.3,
   },
   productModalImage: {
     width: '100%',
@@ -2427,45 +2720,64 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   productInfo: {
-    padding: 20,
+    padding: isTablet ? 24 : 20,
   },
   productName: {
-    fontSize: 24,
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
     fontWeight: '900',
     color: COLORS.text,
     marginBottom: 8,
   },
   productDescription: {
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
     color: COLORS.textSecondary,
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: isTablet ? 28 : 24,
+    marginBottom: isTablet ? 24 : 20,
   },
   productMeta: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 24,
-    paddingVertical: 16,
+    marginBottom: isTablet ? 28 : 24,
+    paddingVertical: isTablet ? 20 : 16,
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.medium,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   metaItem: {
     alignItems: 'center',
   },
+  metaIconContainer: {
+    width: isTablet ? 48 : 40,
+    height: isTablet ? 48 : 40,
+    borderRadius: isTablet ? 24 : 20,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   metaIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-    color: COLORS.primary,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+  },
+  metaLabel: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   metaText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.text,
+    fontWeight: '700',
   },
   ingredientsSection: {
-    marginBottom: 24,
+    marginBottom: isTablet ? 28 : 24,
+  },
+  sectionTitle: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: isTablet ? 16 : 12,
   },
   ingredientsList: {
     flexDirection: 'row',
@@ -2474,33 +2786,33 @@ const styles = StyleSheet.create({
   },
   ingredientTag: {
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.large,
+    paddingHorizontal: isTablet ? 16 : 12,
+    paddingVertical: isTablet ? 8 : 6,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   ingredientText: {
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     color: COLORS.text,
     fontWeight: '700',
   },
   quantitySection: {
-    marginBottom: 20,
+    marginBottom: isTablet ? 24 : 20,
   },
   quantityValue: {
-    fontSize: 18,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     fontWeight: '900',
     color: COLORS.text,
-    marginHorizontal: 20,
+    marginHorizontal: isTablet ? 24 : 20,
     minWidth: 30,
     textAlign: 'center',
   },
   productModalFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: isTablet ? 24 : 20,
+    paddingVertical: isTablet ? 20 : 16,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.background,
@@ -2509,33 +2821,122 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   totalPrice: {
-    fontSize: 20,
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
     fontWeight: '900',
     color: COLORS.primary,
   },
   originalPrice: {
-    fontSize: 14,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.textSecondary,
     textDecorationLine: 'line-through',
     marginTop: 2,
   },
   priceNote: {
-    fontSize: 12,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
     color: COLORS.textSecondary,
     marginTop: 2,
   },
   addToCartButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    borderRadius: BORDER_RADIUS.medium,
+    paddingVertical: isTablet ? 16 : 12,
+    paddingHorizontal: isTablet ? 24 : 20,
     flex: 1,
     alignItems: 'center',
   },
   addToCartButtonText: {
     color: COLORS.textInverse,
-    fontSize: 16,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
+
+  // Address Modal Styles
+  addressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-start',
+    paddingTop: 80,
+  },
+  addressDropdown: {
+    backgroundColor: COLORS.background,
+    marginHorizontal: SCREEN_PADDING,
+    borderRadius: BORDER_RADIUS.medium,
+    maxHeight: height * 0.6,
+    elevation: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+  },
+  addressDropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: isTablet ? 20 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  addressDropdownTitle: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  addressCloseButton: {
+    width: isTablet ? 32 : 30,
+    height: isTablet ? 32 : 30,
+    borderRadius: isTablet ? 16 : 15,
+    backgroundColor: COLORS.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressCloseText: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  addressList: {
+    maxHeight: height * 0.4,
+  },
+  addressItem: {
+    padding: isTablet ? 20 : 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  selectedAddressItem: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  addressItemContent: {
+    flex: 1,
+  },
+  addressTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addressType: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textTransform: 'uppercase',
+  },
+  selectedIndicator: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  addressFullText: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+    lineHeight: isTablet ? 26 : 22,
+  },
+  addressArea: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '400',
+  },
 });
+
