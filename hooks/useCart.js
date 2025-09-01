@@ -119,11 +119,16 @@ export const useCart = () => {
               };
             }
 
+            // ✅ FIXED: Use sale_price if available, otherwise use regular price
+            const finalPrice = productData.sale_price && parseFloat(productData.sale_price) > 0 
+              ? parseFloat(productData.sale_price)
+              : parseFloat(item.price) || parseFloat(productData.price) || 0;
+
             return {
               id: productData.id,
               cartId: item.id,
               name: productData.name || `Product ${item.product_id}`,
-              price: parseFloat(item.price) || 0,
+              price: finalPrice, // ✅ Use discounted price if available
               quantity: parseInt(item.quantity) || 1,
               featured_image: productData.featured_image || null,
               imageUrl: productData.featured_image || productData.image || null,
@@ -131,6 +136,7 @@ export const useCart = () => {
               slug: productData.slug || '',
               description: productData.description || '',
               sale_price: productData.sale_price || null,
+              original_price: productData.price || item.price, // ✅ Keep original price for display
               preparation_time: productData.preparation_time || 25,
               average_rating: productData.average_rating || 0,
               is_featured: productData.is_featured || false,
@@ -154,6 +160,7 @@ export const useCart = () => {
     }
   };
 
+  // ✅ FIXED: Enhanced addToCart to send price information
   const addToCart = async (product, quantity = 1, options = {}) => {
     if (!APP_USER_ID) {
       Alert.alert('Error', 'User not logged in');
@@ -166,8 +173,56 @@ export const useCart = () => {
       if (!product || !product.id) {
         throw new Error('Invalid product data');
       }
+
+      // ✅ FIXED: Send the correct price to the API
+      const priceToUse = product.sale_price || product.price;
       
-      await cartApi.addToCart(APP_USER_ID, product.id, quantity);
+      console.log('Adding to cart with price:', {
+        productId: product.id,
+        price: priceToUse,
+        sale_price: product.sale_price,
+        original_price: product.original_price || product.price
+      });
+      
+      // ✅ You might need to modify your cartApi.addToCart to accept price parameter
+      // If your API supports it, pass the price:
+      await cartApi.addToCart(APP_USER_ID, product.id, quantity, priceToUse);
+      
+      // Alternative: Update local cart immediately with correct price, then sync
+      const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
+      
+      if (existingItemIndex >= 0) {
+        // Update existing item
+        setCartItems(prev => prev.map((item, index) => 
+          index === existingItemIndex 
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        ));
+      } else {
+        // Add new item with correct price
+        const newCartItem = {
+          id: product.id,
+          cartId: `temp_${Date.now()}`, // Temporary ID
+          name: product.name,
+          price: priceToUse, // ✅ Use the discounted price
+          quantity: quantity,
+          featured_image: product.featured_image,
+          imageUrl: product.featured_image || product.image,
+          spice_level: product.spice_level || 'None',
+          slug: product.slug || '',
+          description: product.description || '',
+          sale_price: product.sale_price || null,
+          original_price: product.original_price || product.price,
+          preparation_time: product.preparation_time || 25,
+          average_rating: product.average_rating || 0,
+          is_featured: product.is_featured || false,
+          ingredients: product.ingredients || [],
+        };
+        
+        setCartItems(prev => [...prev, newCartItem]);
+      }
+      
+      // Then sync with API (this might overwrite with server data)
       await loadCartFromAPI();
       
       return { success: true };
@@ -327,9 +382,10 @@ export const useCart = () => {
     }
   };
 
-  // Calculate totals with proper formatting
+  // ✅ Calculate totals using the price field (which should be discounted price)
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   const subtotal = safeCartItems.reduce((sum, item) => {
+    // Use item.price which should already be the discounted price
     const itemPrice = parseFloat(item.price) || 0;
     const itemQuantity = parseInt(item.quantity) || 0;
     return sum + (itemPrice * itemQuantity);

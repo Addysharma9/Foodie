@@ -286,114 +286,101 @@ export default function OrderPlacementScreen() {
   };
 
   // ✅ FIXED PLACE ORDER FUNCTION WITH CORRECT PAYMENT METHOD VALUES
-  const handlePlaceOrder = async () => {
-    // Check if user ID is loaded
-    if (!userId) {
-      Alert.alert('Error', 'User information not loaded yet. Please wait a moment and try again.');
+ const handlePlaceOrder = async () => {
+  if (!userId) {
+    Alert.alert('Error', 'User information not loaded yet. Please wait a moment and try again.');
+    return;
+  }
+
+  if (!selectedAddress) {
+    Alert.alert('Address Required', 'Please select a delivery address');
+    return;
+  }
+
+  if (cartItems.length === 0) {
+    Alert.alert('Empty Cart', 'Your cart is empty');
+    return;
+  }
+
+  try {
+    setPlacingOrder(true);
+    const email = await AsyncStorage.getItem('@user_email');
+    if (!email) {
+      Alert.alert('Error', 'No user email found');
       return;
     }
 
-    if (!selectedAddress) {
-      Alert.alert('Address Required', 'Please select a delivery address');
-      return;
-    }
+    // Calculate discounted subtotal and total
+ const calculatedSubtotal = cartItems.reduce((acc, item) => {
+  const discountedPrice = item.sale_price && item.sale_price > 0 ? item.sale_price : item.price;
+  return acc + discountedPrice * item.quantity;
+}, 0);
 
-    if (cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Your cart is empty');
-      return;
-    }
+const calculatedTotal = calculatedSubtotal - couponDiscount + deliveryFee;
 
+    const orderData = {
+      app_user_id: userId,
+      email: email,
+      address_id: selectedAddress.id,
+      items: cartItems.map(item => ({
+  product_id: item.id,
+  quantity: item.quantity,
+  price: parseFloat(item.sale_price && item.sale_price > 0 ? item.sale_price : item.price) || 0,
+  spice_level: item.spice_level || 'None'
+})),
+
+     subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+discount: parseFloat(couponDiscount) || 0,
+delivery_fee: parseFloat(deliveryFee) || 0,
+total_amount: parseFloat(calculatedTotal.toFixed(2)),
+
+      payment_method: paymentMethod,
+      coupon_code: appliedCoupon?.code || null,
+      special_instructions: specialInstructions.trim() || null,
+    };
+
+    console.log('🚀 Placing order:', JSON.stringify(orderData, null, 2));
+
+    const response = await fetch(`${baseURL}/api/orders/place`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(orderData),
+    });
+
+    console.log('Response status:', response.status);
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+
+    let result;
     try {
-      setPlacingOrder(true);
-      const email = await AsyncStorage.getItem('@user_email');
-      
-      if (!email) {
-        Alert.alert('Error', 'No user email found');
-        return;
-      }
-
-      // ✅ FIXED ORDER DATA WITH CORRECT FIELD NAMES
-      const orderData = {
-        app_user_id: userId,  // Correct field name from Laravel validation
-        email: email,
-        address_id: selectedAddress.id,
-        items: cartItems.map(item => ({
-          product_id: item.id,
-          quantity: item.quantity,
-          price: parseFloat(item.price) || 0,
-          spice_level: item.spice_level || 'None'
-        })),
-        subtotal: parseFloat(subtotal) || 0,
-        delivery_fee: parseFloat(deliveryFee) || 0,
-        discount: parseFloat(couponDiscount) || 0,
-        total_amount: parseFloat(cartTotal) || 0,
-        payment_method: paymentMethod, // ✅ Now sends 'cod' or 'online' (lowercase)
-        coupon_code: appliedCoupon?.code || null,
-        special_instructions: specialInstructions.trim() || null,
-      };
-
-      console.log('🚀 Placing order with correct fields:', JSON.stringify(orderData, null, 2));
-
-      const response = await fetch(`${baseURL}/api/orders/place`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      console.log('📊 Response status:', response.status);
-
-      const responseText = await response.text();
-      console.log('📄 Raw response:', responseText);
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-        console.log('✅ Parsed response:', result);
-      } catch (parseError) {
-        console.error('❌ Failed to parse JSON:', parseError);
-        throw new Error('Invalid response from server');
-      }
-
-      if (response.ok && (result.message === 'Order placed successfully')) {
-        Alert.alert(
-          '🎉 Order Placed!',
-          'Your order has been placed successfully. You will receive updates on your order status.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                navigation.replace('Home');
-              }
-            }
-          ]
-        );
-      } else {
-        throw new Error(result.message || 'Failed to place order. Please try again.');
-      }
-    } catch (error) {
-      console.error('💥 Error placing order:', error);
-      
-      let errorMessage = 'Failed to place order. Please try again.';
-      
-      if (error.message.includes('payment method')) {
-        errorMessage = 'Invalid payment method selected. Please try again.';
-      } else if (error.message.includes('user id')) {
-        errorMessage = 'User information is missing. Please logout and login again.';
-      } else if (error.message.includes('Invalid response')) {
-        errorMessage = 'Server error. Please contact support if the problem persists.';
-      } else if (error.message.includes('Network')) {
-        errorMessage = 'Network error. Please check your internet connection.';
-      }
-      
-      Alert.alert('❌ Order Failed', errorMessage);
-    } finally {
-      setPlacingOrder(false);
+      result = JSON.parse(responseText);
+      console.log('Parsed response:', result);
+    } catch {
+      throw new Error('Invalid response from server');
     }
-  };
+
+    if (response.ok && result.message === 'Order placed successfully') {
+      Alert.alert('🎉 Order Placed!', 'Your order has been placed successfully.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.replace('Home'),
+        },
+      ]);
+    } else {
+      throw new Error(result.message || 'Failed to place order. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error placing order:', error);
+    Alert.alert('❌ Order Failed', error.message || 'Failed to place order. Please try again.');
+  } finally {
+    setPlacingOrder(false);
+  }
+};
+
 
   // Helper functions for dropdowns
   const selectCity = (cityKey) => {

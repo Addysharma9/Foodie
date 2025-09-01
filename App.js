@@ -5,8 +5,8 @@ import Login from './Login';
 import UserDetailsScreen from './Userdetail';
 import Homescreen from './HomeScreen';
 import Profile from './ProfileScreen';
-import OrderPlacementScreen from './OrderPlacementScreen'; // Add this import
-
+import OrderPlacementScreen from './OrderPlacementScreen'; 
+import MyOrders from './MyOrders'
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -19,6 +19,13 @@ export default function App() {
           gestureEnabled: false
         }}
       >
+        <Stack.Screen
+        name="MyOrder"
+        component={MyOrders}
+        options={{
+          gestureEnabled:false
+        }}
+        />
         <Stack.Screen 
           name="Login" 
           component={Login}

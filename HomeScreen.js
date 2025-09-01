@@ -587,12 +587,13 @@ const CartModal = ({
 const BottomTabs = ({ activeTab, cartCount }) => {
   const navigation = useNavigation();
   
-  const tabs = [
-    { id: 'delivery', label: 'Home', icon: '🏠', activeColor: COLORS.primary, onPress: () => navigation.replace('Home') },
-    { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.primary, onPress: () => navigation.replace('Profile') },
-    { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.primary, onPress: () => {} },
-    { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.primary, onPress: () => {} },
-  ];
+// In your existing HomeScreen.js, update the tabs array:
+const tabs = [
+  { id: 'delivery', label: 'Home', icon: '🏠', activeColor: COLORS.primary, onPress: () => navigation.replace('Home') },
+  { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.primary, onPress: () => navigation.replace('Profile') },
+  { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.primary, onPress: () => {} },
+  { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.primary, onPress: () => navigation.replace('MyOrder') }, // ✅ Updated
+];
 
   return (
     <View style={styles.bottomTabContainer}>
