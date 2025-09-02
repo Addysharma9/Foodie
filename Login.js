@@ -11,7 +11,7 @@ import {
   FlatList,
   Platform,
   Alert,
-  Easing,
+  Image,
 } from 'react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Checkbox from 'expo-checkbox';
@@ -59,7 +59,7 @@ const FONTS = {
   huge: 32 * FONT_SCALE,
 };
 
-// Professional color palette (matching HomeScreen)
+// Professional color palette
 const COLORS = {
   // Primary brand colors with depth
   primary: '#FF6B35',
@@ -139,6 +139,15 @@ const banners = [
   },
 ];
 
+// Creative loading messages and food items
+const LOADING_STATES = [
+  { message: 'Preparing your kitchen...', foods: ['🍳', '👨‍🍳', '🔥'] },
+  { message: 'Selecting fresh ingredients...', foods: ['🥕', '🍅', '🥬'] },
+  { message: 'Cooking your favorites...', foods: ['🍕', '🍔', '🍟'] },
+  { message: 'Adding special spices...', foods: ['🧂', '🌶️', '🧄'] },
+  { message: 'Almost ready to serve...', foods: ['🍽️', '✨', '😋'] },
+];
+
 export default function Login() {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -149,11 +158,28 @@ export default function Login() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [navigationAttempted, setNavigationAttempted] = useState(false);
+  const [loadingStateIndex, setLoadingStateIndex] = useState(0);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoOpacityAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Creative loading animations
+  const plateRotateAnim = useRef(new Animated.Value(0)).current;
+  const foodBounceAnim = useRef(new Animated.Value(0)).current;
+  const steamAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
+  const chefHatAnim = useRef(new Animated.Value(0)).current;
+  
+  // Food floating animations (3 different foods)
+  const food1Anim = useRef(new Animated.Value(0)).current;
+  const food2Anim = useRef(new Animated.Value(0)).current;
+  const food3Anim = useRef(new Animated.Value(0)).current;
+  
   const flatListRef = useRef(null);
   const initializationRef = useRef(false);
 
@@ -318,14 +344,34 @@ export default function Login() {
   // Enhanced Animation effects
   useEffect(() => {
     if (!isInitializing && !navigationAttempted && isFocused) {
-      // Logo rotation animation
-      Animated.loop(
-        Animated.timing(logoRotateAnim, {
+      // Logo animations for loading screen
+      Animated.sequence([
+        Animated.timing(logoOpacityAnim, {
           toValue: 1,
-          duration: 8000,
-          easing: Easing.linear,
+          duration: 600,
           useNativeDriver: true,
-        })
+        }),
+        Animated.timing(logoScaleAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Pulse animation for loading
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
       ).start();
 
       // Main animations
@@ -333,19 +379,16 @@ export default function Login() {
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 800,
-          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
           duration: 600,
-          easing: Easing.out(Easing.back(1.2)),
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
           toValue: 1,
           duration: 500,
-          easing: Easing.out(Easing.back(1.1)),
           useNativeDriver: true,
         }),
       ]).start();
@@ -365,6 +408,151 @@ export default function Login() {
       return () => clearInterval(interval);
     }
   }, [isInitializing, navigationAttempted, isFocused]);
+
+  // Creative Loading Animations
+  useEffect(() => {
+    if (isInitializing || navigationAttempted) {
+      // Plate rotation animation
+      Animated.loop(
+        Animated.timing(plateRotateAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Food bouncing animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(foodBounceAnim, {
+            toValue: -10,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(foodBounceAnim, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Steam animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(steamAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(steamAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Progress animation
+      Animated.loop(
+        Animated.timing(progressAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: false,
+        })
+      ).start();
+
+      // Sparkle animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sparkleAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sparkleAnim, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Chef hat bobbing
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(chefHatAnim, {
+            toValue: -5,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(chefHatAnim, {
+            toValue: 5,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Floating food animations
+      const startFloatingFoodAnimations = () => {
+        // Food 1 - Circular motion
+        Animated.loop(
+          Animated.timing(food1Anim, {
+            toValue: 1,
+            duration: 6000,
+            useNativeDriver: true,
+          })
+        ).start();
+
+        // Food 2 - Vertical floating
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(food2Anim, {
+              toValue: 1,
+              duration: 2000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(food2Anim, {
+              toValue: 0,
+              duration: 2000,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+
+        // Food 3 - Horizontal sway
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(food3Anim, {
+              toValue: 1,
+              duration: 3000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(food3Anim, {
+              toValue: -1,
+              duration: 3000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(food3Anim, {
+              toValue: 0,
+              duration: 1500,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      };
+
+      startFloatingFoodAnimations();
+
+      // Loading state progression
+      const stateInterval = setInterval(() => {
+        setLoadingStateIndex(prev => (prev + 1) % LOADING_STATES.length);
+      }, 2000);
+
+      return () => clearInterval(stateInterval);
+    }
+  }, [isInitializing, navigationAttempted]);
 
   // Enhanced banner render with professional design
   const renderBanner = ({ item }) => (
@@ -561,44 +749,282 @@ export default function Login() {
     itemVisiblePercentThreshold: 50
   };
 
-  const logoRotation = logoRotateAnim.interpolate({
+  // Animation interpolations
+  const plateRotation = plateRotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  // Enhanced loading screen
+  const steamOpacity = steamAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 1],
+  });
+
+  const steamTranslateY = steamAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -30],
+  });
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['10%', '100%'],
+  });
+
+  const sparkleRotation = sparkleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const sparkleOpacity = sparkleAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.3, 1, 0.3],
+  });
+
+  // Floating food interpolations
+  const food1TranslateX = food1Anim.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, 30, 0, -30, 0],
+  });
+
+  const food1TranslateY = food1Anim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, -20, 0],
+  });
+
+  const food2TranslateY = food2Anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -25],
+  });
+
+  const food3TranslateX = food3Anim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-20, 0, 20],
+  });
+
+  // Enhanced loading screen with creative food animations
   if (isInitializing || navigationAttempted) {
+    const currentLoadingState = LOADING_STATES[loadingStateIndex];
+    
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
         
         <LinearGradient
-          colors={[COLORS.primary, COLORS.primaryDark]}
+          colors={[COLORS.primary, COLORS.primaryDark, '#D44512']}
           style={styles.loadingContainer}
         >
           <View style={styles.loadingContent}>
+            
+            {/* Main Logo with Rotating Plate Effect */}
             <Animated.View 
               style={[
-                styles.loadingLogo,
-                { transform: [{ rotate: logoRotation }] }
+                styles.loadingLogoContainer,
+                {
+                  opacity: logoOpacityAnim,
+                  transform: [
+                    { scale: logoScaleAnim },
+                    { scale: pulseAnim }
+                  ]
+                }
               ]}
             >
-              <LinearGradient
-                colors={[COLORS.surface, COLORS.surfaceElevated]}
-                style={styles.loadingLogoCircle}
-              >
-                <Text style={styles.loadingLogoText}>F</Text>
-              </LinearGradient>
+              <View style={styles.loadingLogoWrapper}>
+                {/* Rotating Plate Background */}
+                <Animated.View 
+                  style={[
+                    styles.loadingPlate,
+                    { transform: [{ rotate: plateRotation }] }
+                  ]}
+                >
+                  <Text style={styles.plateEmoji}>🍽️</Text>
+                </Animated.View>
+                
+                {/* Logo Ring */}
+                <View style={styles.loadingLogoRing} />
+                
+                {/* Logo */}
+                <Image
+                  source={require('./assets/icong2.png')}
+                  style={styles.loadingLogoImage}
+                  resizeMode="contain"
+                />
+                
+                {/* Chef Hat */}
+                <Animated.View 
+                  style={[
+                    styles.chefHat,
+                    { transform: [{ translateY: chefHatAnim }] }
+                  ]}
+                >
+                  <Text style={styles.chefHatEmoji}>👨‍🍳</Text>
+                </Animated.View>
+              </View>
             </Animated.View>
-            <Text style={styles.loadingTitle}>Foodie</Text>
-            <Text style={styles.loadingSubtitle}>
-              {navigationAttempted ? 'Redirecting...' : 'Loading...'}
-            </Text>
-            <View style={styles.loadingDots}>
-              <View style={[styles.loadingDot, { animationDelay: '0ms' }]} />
-              <View style={[styles.loadingDot, { animationDelay: '200ms' }]} />
-              <View style={[styles.loadingDot, { animationDelay: '400ms' }]} />
-            </View>
+
+            {/* App Name with Steam Effect */}
+            <Animated.View style={{ opacity: logoOpacityAnim }}>
+              <View style={styles.titleContainer}>
+                <Text style={styles.loadingTitle}>Fozfo</Text>
+                
+                {/* Steam Animation */}
+                <Animated.View 
+                  style={[
+                    styles.steamContainer,
+                    {
+                      opacity: steamOpacity,
+                      transform: [{ translateY: steamTranslateY }]
+                    }
+                  ]}
+                >
+                  <Text style={styles.steamEmoji}>💨</Text>
+                  <Text style={styles.steamEmoji}>💨</Text>
+                  <Text style={styles.steamEmoji}>💨</Text>
+                </Animated.View>
+              </View>
+              
+              <Text style={styles.loadingSubtitle}>
+                {navigationAttempted ? 'Welcome back! 🎉' : currentLoadingState.message}
+              </Text>
+            </Animated.View>
+
+            {/* Animated Food Icons */}
+            <Animated.View style={[styles.foodContainer, { opacity: logoOpacityAnim }]}>
+              {currentLoadingState.foods.map((food, index) => (
+                <Animated.View 
+                  key={`${loadingStateIndex}-${index}`}
+                  style={[
+                    styles.foodIcon,
+                    { 
+                      transform: [
+                        { translateY: foodBounceAnim },
+                        { scale: sparkleOpacity }
+                      ]
+                    }
+                  ]}
+                >
+                  <Text style={styles.foodEmoji}>{food}</Text>
+                </Animated.View>
+              ))}
+            </Animated.View>
+
+            {/* Enhanced Progress Bar with Sparkles */}
+            <Animated.View style={[styles.loadingIndicatorContainer, { opacity: logoOpacityAnim }]}>
+              <View style={styles.progressContainer}>
+                <View style={styles.loadingBar}>
+                  <Animated.View 
+                    style={[
+                      styles.loadingBarFill,
+                      { width: progressWidth }
+                    ]} 
+                  />
+                </View>
+                
+                {/* Sparkle Effect */}
+                <Animated.View 
+                  style={[
+                    styles.sparkleContainer,
+                    {
+                      opacity: sparkleOpacity,
+                      transform: [{ rotate: sparkleRotation }]
+                    }
+                  ]}
+                >
+                  <Text style={styles.sparkle}>✨</Text>
+                </Animated.View>
+              </View>
+              
+              <Text style={styles.loadingText}>
+                {navigationAttempted ? 'Redirecting to your delicious journey...' : 'Getting everything ready for you...'}
+              </Text>
+            </Animated.View>
+          </View>
+
+          {/* Floating Food Elements */}
+          <View style={styles.floatingFoodElements}>
+            {/* Floating Food 1 - Pizza */}
+            <Animated.View 
+              style={[
+                styles.floatingFood,
+                styles.floatingFood1,
+                {
+                  transform: [
+                    { translateX: food1TranslateX },
+                    { translateY: food1TranslateY },
+                    { rotate: plateRotation }
+                  ]
+                }
+              ]}
+            >
+              <Text style={styles.floatingFoodEmoji}>🍕</Text>
+            </Animated.View>
+
+            {/* Floating Food 2 - Burger */}
+            <Animated.View 
+              style={[
+                styles.floatingFood,
+                styles.floatingFood2,
+                {
+                  transform: [
+                    { translateY: food2TranslateY },
+                    { scale: pulseAnim }
+                  ]
+                }
+              ]}
+            >
+              <Text style={styles.floatingFoodEmoji}>🍔</Text>
+            </Animated.View>
+
+            {/* Floating Food 3 - Taco */}
+            <Animated.View 
+              style={[
+                styles.floatingFood,
+                styles.floatingFood3,
+                {
+                  transform: [
+                    { translateX: food3TranslateX },
+                    { rotate: sparkleRotation }
+                  ]
+                }
+              ]}
+            >
+              <Text style={styles.floatingFoodEmoji}>🌮</Text>
+            </Animated.View>
+
+            {/* Additional Decorative Elements */}
+            <Animated.View 
+              style={[
+                styles.decorativeElement,
+                styles.decorativeElement1,
+                {
+                  opacity: sparkleOpacity,
+                  transform: [{ scale: pulseAnim }]
+                }
+              ]}
+            >
+              <Text style={styles.decorativeEmoji}>🍟</Text>
+            </Animated.View>
+
+            <Animated.View 
+              style={[
+                styles.decorativeElement,
+                styles.decorativeElement2,
+                {
+                  opacity: steamOpacity,
+                  transform: [{ translateY: chefHatAnim }]
+                }
+              ]}
+            >
+              <Text style={styles.decorativeEmoji}>🥤</Text>
+            </Animated.View>
+          </View>
+
+          {/* Background Pattern */}
+          <View style={styles.backgroundPattern}>
+            <Text style={styles.patternEmoji}>🍴</Text>
+            <Text style={styles.patternEmoji}>🥘</Text>
+            <Text style={styles.patternEmoji}>🍝</Text>
+            <Text style={styles.patternEmoji}>🍜</Text>
+            <Text style={styles.patternEmoji}>🥗</Text>
           </View>
         </LinearGradient>
       </SafeAreaView>
@@ -625,22 +1051,23 @@ export default function Login() {
           },
         ]}
       >
-        {/* Enhanced Header */}
+        {/* Enhanced Header with Custom Logo */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryDark]}
-              style={styles.logoCircle}
-            >
-              <Text style={styles.logoText}>F</Text>
+            <View style={styles.logoWrapper}>
               <View style={styles.logoRing} />
-            </LinearGradient>
+              <Image
+                source={require('./assets/icong2.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
-          <Text style={styles.appTitle}>Foodie</Text>
+          <Text style={styles.appTitle}>Fozfo</Text>
           <Text style={styles.appSubtitle}>Delicious food delivered to you</Text>
         </View>
 
-        {/* FIXED Enhanced Carousel */}
+        {/* Enhanced Carousel */}
         <View style={styles.carouselSection}>
           <FlatList
             ref={flatListRef}
@@ -653,9 +1080,9 @@ export default function Login() {
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             style={styles.carousel}
-            snapToInterval={width - (SCREEN_PADDING * 2)} // FIXED: Perfect snap interval
+            snapToInterval={width - (SCREEN_PADDING * 2)}
             decelerationRate="fast"
-            contentContainerStyle={{}} // FIXED: No extra padding needed
+            contentContainerStyle={{}}
           />
           
           <View style={styles.dotsContainer}>
@@ -713,8 +1140,8 @@ export default function Login() {
                   {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
                 </Text>
                 {isGoogleLoading && (
-                  <View style={styles.loadingIndicator}>
-                    <Text style={styles.loadingDots}>●●●</Text>
+                  <View style={styles.loadingButtonIndicator}>
+                    <View style={styles.spinner} />
                   </View>
                 )}
               </LinearGradient>
@@ -756,57 +1183,229 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   
-  // Enhanced Loading Styles
+  // Enhanced Creative Loading Styles
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   loadingContent: {
     alignItems: 'center',
+    zIndex: 3,
   },
-  loadingLogo: {
-    marginBottom: SPACING.xl,
+  
+  // Logo Container with Plate Animation
+  loadingLogoContainer: {
+    marginBottom: SPACING.xxxl,
+    position: 'relative',
   },
-  loadingLogoCircle: {
+  loadingLogoWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingPlate: {
+    position: 'absolute',
+    width: isTablet ? 140 : 120,
+    height: isTablet ? 140 : 120,
+    borderRadius: isTablet ? 70 : 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  plateEmoji: {
+    fontSize: isTablet ? 80 : 60,
+    opacity: 0.3,
+  },
+  loadingLogoRing: {
+    position: 'absolute',
+    width: isTablet ? 120 : 100,
+    height: isTablet ? 120 : 100,
+    borderRadius: isTablet ? 60 : 50,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderStyle: 'dashed',
+    zIndex: 2,
+  },
+  loadingLogoImage: {
     width: isTablet ? 80 : 60,
     height: isTablet ? 80 : 60,
     borderRadius: isTablet ? 40 : 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    zIndex: 3,
   },
-  loadingLogoText: {
-    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
-    fontWeight: '900',
-    color: COLORS.primary,
+  chefHat: {
+    position: 'absolute',
+    top: -20,
+    right: -10,
+    zIndex: 4,
+  },
+  chefHatEmoji: {
+    fontSize: isTablet ? 30 : 25,
+  },
+
+  // Title with Steam Effect
+  titleContainer: {
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: SPACING.sm,
   },
   loadingTitle: {
-    fontSize: isTablet ? FONTS.huge : FONTS.xxxl,
+    fontSize: isTablet ? FONTS.huge + 8 : FONTS.huge,
     fontWeight: '900',
     color: COLORS.textInverse,
-    marginBottom: SPACING.sm,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  steamContainer: {
+    position: 'absolute',
+    top: -15,
+    flexDirection: 'row',
+    gap: 5,
+  },
+  steamEmoji: {
+    fontSize: isTablet ? 16 : 14,
+    opacity: 0.8,
   },
   loadingSubtitle: {
     fontSize: isTablet ? FONTS.lg : FONTS.base,
     color: 'rgba(255,255,255,0.9)',
     marginBottom: SPACING.xl,
     fontWeight: '500',
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  loadingDots: {
+
+  // Food Animation Container
+  foodContainer: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.lg,
+    marginBottom: SPACING.xxxl,
+    height: 60,
   },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+  foodIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foodEmoji: {
+    fontSize: isTablet ? 35 : 30,
+  },
+
+  // Enhanced Progress Bar with Sparkles
+  loadingIndicatorContainer: {
+    alignItems: 'center',
+    marginTop: SPACING.xl,
+  },
+  progressContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  loadingBar: {
+    width: 220,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  loadingBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.textInverse,
+    borderRadius: 3,
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    right: -20,
+    top: -10,
+  },
+  sparkle: {
+    fontSize: isTablet ? 20 : 18,
+  },
+  loadingText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+
+  // Floating Food Elements
+  floatingFoodElements: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  floatingFood: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingFood1: {
+    top: '20%',
+    right: '15%',
+  },
+  floatingFood2: {
+    top: '60%',
+    left: '10%',
+  },
+  floatingFood3: {
+    top: '40%',
+    right: '20%',
+  },
+  floatingFoodEmoji: {
+    fontSize: isTablet ? 35 : 30,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  // Decorative Elements
+  decorativeElement: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  decorativeElement1: {
+    top: '25%',
+    left: '20%',
+  },
+  decorativeElement2: {
+    bottom: '25%',
+    right: '25%',
+  },
+  decorativeEmoji: {
+    fontSize: isTablet ? 25 : 20,
+    opacity: 0.6,
+  },
+
+  // Background Pattern
+  backgroundPattern: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 50,
+  },
+  patternEmoji: {
+    fontSize: isTablet ? 40 : 35,
+    opacity: 0.1,
+    margin: 20,
   },
 
   // Enhanced Content Styles
@@ -818,7 +1417,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  // Enhanced Header Styles
+  // Enhanced Header Styles with Custom Logo
   header: {
     alignItems: 'center',
     paddingVertical: SPACING.xl,
@@ -827,41 +1426,31 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: SPACING.lg,
   },
-  logoCircle: {
-    width: isTablet ? 80 : 60,
-    height: isTablet ? 80 : 60,
-    borderRadius: isTablet ? 40 : 30,
-    justifyContent: 'center',
+  logoWrapper: {
+    position: 'relative',
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    justifyContent: 'center',
   },
   logoRing: {
     position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: isTablet ? 44 : 34,
+    width: isTablet ? 84 : 64,
+    height: isTablet ? 84 : 64,
+    borderRadius: isTablet ? 42 : 32,
     borderWidth: 2,
     borderColor: COLORS.primaryLight,
     opacity: 0.6,
   },
-  logoText: {
-    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
-    fontWeight: '900',
-    color: COLORS.textInverse,
-    letterSpacing: 0.5,
+  logoImage: {
+    width: isTablet ? 60 : 45,
+    height: isTablet ? 60 : 45,
+    borderRadius: isTablet ? 30 : 22.5,
   },
   appTitle: {
     fontSize: isTablet ? FONTS.huge : FONTS.xxxl,
     fontWeight: '900',
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   appSubtitle: {
     fontSize: isTablet ? FONTS.lg : FONTS.base,
@@ -870,7 +1459,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // FIXED Enhanced Carousel Styles
+  // Enhanced Carousel Styles
   carouselSection: {
     marginVertical: SPACING.xl,
   },
@@ -878,9 +1467,9 @@ const styles = StyleSheet.create({
     height: isTablet ? 200 : 180,
   },
   bannerWrapper: {
-    width: width - (SCREEN_PADDING * 2), // FIXED: Exact screen width minus both sides padding
-    paddingHorizontal: 0, // FIXED: No extra padding
-    marginHorizontal: 0, // FIXED: No margin
+    width: width - (SCREEN_PADDING * 2),
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
   },
   bannerCard: {
     borderRadius: BORDER_RADIUS.xxl,
@@ -892,7 +1481,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 12,
     position: 'relative',
-    marginHorizontal: SPACING.md, // FIXED: Small margin for visual separation
+    marginHorizontal: SPACING.md,
   },
   bannerPattern: {
     position: 'absolute',
@@ -944,6 +1533,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.borderLight,
+    transition: 'all 0.3s ease',
   },
   activeDot: {
     backgroundColor: COLORS.primary,
@@ -1027,12 +1617,16 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     letterSpacing: 0.2,
   },
-  loadingIndicator: {
+  loadingButtonIndicator: {
     marginLeft: SPACING.md,
   },
-  loadingDots: {
-    color: COLORS.textMuted,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+  spinner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.primaryLight,
+    borderTopColor: COLORS.primary,
   },
 
   // Enhanced Terms Styles

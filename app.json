@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "Foodie",
-    "slug": "Foodie",
+    "name": "Fozfo",
+    "slug": "Fozfo",
+    "icon": "./assets/icong.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -83,7 +84,7 @@
       "expo-notifications"
     ],
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/icong.png",
       "color": "#FF6C00",
       "ios": {
         "sound": true,
@@ -101,7 +102,7 @@
           250,
           250
         ],
-        "icon": "./assets/notification-icon.png",
+        "icon": "./assets/icong.png",
         "color": "#FF6C00"
       }
     },

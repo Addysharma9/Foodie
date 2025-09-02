@@ -433,10 +433,6 @@ const OrderItemCard = ({ orderItem, addToCart, isItemInCart, getItemQuantity }) 
             {addingToCart ? 'Adding...' : (inCart ? `In Cart (${cartQuantity})` : 'Add to Cart')}
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.helpButton}>
-          <Text style={styles.helpButtonText}>Help</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Progress Indicator */}
