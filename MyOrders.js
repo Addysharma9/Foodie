@@ -48,7 +48,7 @@ const formatDate = (dateString) => {
 
 // Professional color palette
 const COLORS = {
-  primary: '#2563eb',
+  primary: '#FF6B35',
   primaryDark: '#1d4ed8',
   primaryLight: '#eff6ff',
   secondary: '#7c3aed',
@@ -762,12 +762,8 @@ export default function MyOrder() {
 
   if (!userId && loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your orders...</Text>
-        </View>
-      </SafeAreaView>
+     <>
+     </>
     );
   }
 

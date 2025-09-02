@@ -16,6 +16,8 @@ import {
   Modal,
   TextInput,
   Alert,
+  ImageBackground,
+  Easing,
 } from 'react-native';
 import FloatingGirlAssistant from './Animatedgirl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,41 +25,58 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCart } from './hooks/useCart';
 
-// Responsive dimensions
+// Enhanced responsive dimensions
 const { width, height } = Dimensions.get('window');
 const isTablet = width > 768;
 const isLargeScreen = width > 414;
 
-// Responsive measurements
-const SCREEN_PADDING = width * 0.04;
-const CARD_SPACING = width * 0.03;
-const BORDER_RADIUS = {
-  small: 8,
-  medium: 12,
-  large: 16,
-  xlarge: 20,
+// Professional spacing system
+const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
 };
 
-// Responsive font sizes
-const FONT_SCALE = Math.min(width / 375, 1.2); // Base on iPhone 11 Pro
+// Professional padding system
+const SCREEN_PADDING = width * 0.04;
+const CARD_SPACING = width * 0.025;
+
+// Enhanced border radius system
+const BORDER_RADIUS = {
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 20,
+  xxxl: 24,
+  round: 50,
+};
+
+// Professional typography scale
+const FONT_SCALE = Math.min(width / 375, 1.3);
 const FONTS = {
-  xs: 12 * FONT_SCALE,
-  sm: 14 * FONT_SCALE,
-  base: 16 * FONT_SCALE,
-  lg: 18 * FONT_SCALE,
-  xl: 20 * FONT_SCALE,
-  xxl: 24 * FONT_SCALE,
-  xxxl: 28 * FONT_SCALE,
+  xs: 11 * FONT_SCALE,
+  sm: 13 * FONT_SCALE,
+  base: 15 * FONT_SCALE,
+  lg: 17 * FONT_SCALE,
+  xl: 19 * FONT_SCALE,
+  xxl: 22 * FONT_SCALE,
+  xxxl: 26 * FONT_SCALE,
+  huge: 32 * FONT_SCALE,
 };
 
 const baseURL = 'http://212.38.94.189:8000';
 
-// Helper function at the top
+// Helper functions
 const formatPrice = (amount) => {
   return parseFloat(amount || 0).toFixed(2);
 };
 
-// Enhanced image helper function
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
@@ -67,105 +86,102 @@ const getImageUrl = (imagePath) => {
   return `${baseURL}/storage/${imagePath}`;
 };
 
+// Professional color palette
 const COLORS = {
-  // Swiggy brand colors
-  primary: '#FC8019',        // Swiggy orange
-  primaryDark: '#E8660C',    // Darker orange
-  primaryLight: '#FFE8D6',   // Light orange tint
+  // Primary brand colors with depth
+  primary: '#FF6B35',
+  primaryDark: '#E8541C',
+  primaryLight: '#FFE8E0',
+  primaryUltraLight: '#FFF5F2',
   
-  // Secondary colors
-  secondary: '#FF3008',      // Swiggy red
-  accent: '#FFC107',         // Golden yellow for badges
+  // Enhanced secondary colors
+  secondary: '#4A90E2',
+  accent: '#F7B731',
+  accentLight: '#FEF3CD',
   
-  // Neutrals
-  background: '#FFFFFF',     // Pure white background
-  surface: '#FFFFFF',        // Card backgrounds
-  surfaceAlt: '#F8F8F8',     // Alternative surface
+  // Sophisticated neutrals
+  background: '#FAFBFC',
+  surface: '#FFFFFF',
+  surfaceElevated: '#FFFFFF',
+  surfaceAlt: '#F8F9FA',
+  surfaceCard: '#FFFFFF',
   
-  // Text colors
-  text: '#282C3F',           // Dark text (Swiggy's primary text)
-  textSecondary: '#686B78',  // Secondary text
-  textMuted: '#93959F',      // Muted text
-  textInverse: '#FFFFFF',    // White text for dark backgrounds
+  // Typography hierarchy
+  text: '#1A1D29',
+  textPrimary: '#2C2F36',
+  textSecondary: '#6C7278',
+  textMuted: '#9CA3AF',
+  textDisabled: '#D1D5DB',
+  textInverse: '#FFFFFF',
   
   // Status colors
-  success: '#60B246',        // Green for success
-  error: '#E23744',          // Red for errors
-  warning: '#F39800',        // Orange for warnings
-  info: '#1976D2',           // Blue for info
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  error: '#EF4444',
+  errorLight: '#FEE2E2',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
   
-  // Borders and shadows
-  border: '#E9E9E9',         // Light border
-  divider: '#F1F1F2',        // Very light divider
-  shadow: 'rgba(40, 44, 63, 0.1)', // Subtle shadow
+  // Enhanced borders and dividers
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
+  divider: '#F1F3F4',
   
-  // Gradients
-  gradientStart: '#FC8019',
-  gradientEnd: '#FF3008',
+  // Professional shadows
+  shadow: 'rgba(17, 25, 40, 0.12)',
+  shadowDark: 'rgba(17, 25, 40, 0.25)',
+  shadowLight: 'rgba(17, 25, 40, 0.06)',
+  
+  // Glass morphism
+  glass: 'rgba(255, 255, 255, 0.85)',
+  glassBlur: 'rgba(255, 255, 255, 0.2)',
 };
 
-
-
-
-
-
-
-
-
-
-
-
-// Helper function for address formatting
+// Address formatting helper
 const formatAddress = (address) => {
   if (!address) return 'Select Location';
-  if (address.length > 35) {
-    return address.substring(0, 32) + '...';
+  if (address.length > 40) {
+    return address.substring(0, 37) + '...';
   }
   return address;
 };
 
-// Enhanced Skeleton Components
-const Pulse = ({ style }) => {
-  const pulseValue = useRef(new Animated.Value(0.3)).current;
+// Enhanced animated pulse component
+const Pulse = ({ style, children }) => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
   
   useEffect(() => {
-    const pulseAnimation = Animated.loop(
+    const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseValue, {
+        Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1200,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
           useNativeDriver: true,
         }),
-        Animated.timing(pulseValue, {
-          toValue: 0.3,
-          duration: 1000,
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 1200,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
           useNativeDriver: true,
         }),
       ])
     );
-    pulseAnimation.start();
-    return () => pulseAnimation.stop();
-  }, [pulseValue]);
-
-  const opacity = pulseValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
 
   return (
-    <Animated.View
-      style={[
-        {
-          backgroundColor: '#F0F0F0',
-          opacity: pulseValue,
-        },
-        style,
-      ]}
-    />
+    <Animated.View style={[{ opacity: pulseAnim }, style]}>
+      {children || <View style={[{ backgroundColor: '#F1F3F4', borderRadius: 8 }, style]} />}
+    </Animated.View>
   );
 };
 
-const SkeletonLine = ({ height = 12, width = '100%', borderRadius = 6, style }) => (
+// Professional skeleton components
+const SkeletonLine = ({ height = 14, width = '100%', borderRadius = 6, style }) => (
   <Pulse style={[{ height, width, borderRadius }, style]} />
 );
 
@@ -173,12 +189,31 @@ const SkeletonCircle = ({ size = 48, style }) => (
   <Pulse style={[{ width: size, height: size, borderRadius: size / 2 }, style]} />
 );
 
-const SkeletonCard = ({ height = 120, borderRadius = 14, style }) => (
-  <Pulse style={[{ height, borderRadius }, style]} />
+const SkeletonCard = ({ height = 120, borderRadius = 16, style }) => (
+  <Pulse style={[{ height, borderRadius, backgroundColor: '#F8F9FA' }, style]} />
 );
 
-// Address Dropdown Modal Component
+// Enhanced Address Dropdown Modal
 const AddressDropdownModal = ({ visible, addresses, selectedId, onSelect, onClose }) => {
+  const slideAnim = useRef(new Animated.Value(-300)).current;
+  
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 80,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -300,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
@@ -188,11 +223,16 @@ const AddressDropdownModal = ({ visible, addresses, selectedId, onSelect, onClos
         activeOpacity={1} 
         onPress={onClose}
       >
-        <View style={styles.addressDropdown}>
+        <Animated.View 
+          style={[
+            styles.addressDropdown,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
           <View style={styles.addressDropdownHeader}>
-            <Text style={styles.addressDropdownTitle}>Select Address</Text>
+            <Text style={styles.addressDropdownTitle}>Choose Location</Text>
             <TouchableOpacity onPress={onClose} style={styles.addressCloseButton}>
-              <Text style={styles.addressCloseText}>×</Text>
+              <Text style={styles.addressCloseText}>✕</Text>
             </TouchableOpacity>
           </View>
           
@@ -205,12 +245,17 @@ const AddressDropdownModal = ({ visible, addresses, selectedId, onSelect, onClos
                   selectedId === address.id && styles.selectedAddressItem
                 ]}
                 onPress={() => onSelect(address)}
+                activeOpacity={0.7}
               >
                 <View style={styles.addressItemContent}>
                   <View style={styles.addressTypeContainer}>
-                    <Text style={styles.addressType}>{address.type}</Text>
+                    <View style={styles.addressTypeChip}>
+                      <Text style={styles.addressType}>{address.type}</Text>
+                    </View>
                     {selectedId === address.id && (
-                      <Text style={styles.selectedIndicator}>✓</Text>
+                      <View style={styles.selectedIndicator}>
+                        <Text style={styles.selectedIndicatorText}>✓</Text>
+                      </View>
                     )}
                   </View>
                   <Text style={styles.addressFullText}>{address.full_address}</Text>
@@ -219,22 +264,35 @@ const AddressDropdownModal = ({ visible, addresses, selectedId, onSelect, onClos
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
       </TouchableOpacity>
     </Modal>
   );
 };
 
-// Product Detail Modal with Professional Design
+// Enhanced Product Detail Modal
 const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart }) => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const slideAnim = useRef(new Animated.Value(height)).current;
   
   useEffect(() => {
     if (visible) {
       setQuantity(1);
       setImageLoaded(false);
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 65,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
   }, [visible]);
 
@@ -255,7 +313,7 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
       
       if (result.success) {
         onClose();
-        Alert.alert('Success', `${product.name} added to cart successfully!`);
+        Alert.alert('Added to Cart', `${product.name} has been added successfully!`);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -287,77 +345,102 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
   const ingredients = getSafeIngredients();
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.productModalContainer}>
-        <View style={styles.productModalHeader}>
-          <TouchableOpacity onPress={onClose} style={styles.modalBackButton}>
-            <Text style={styles.modalBackText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.productModalTitle}>Product Details</Text>
-          <View style={styles.modalPlaceholder} />
+    <Modal visible={visible} animationType="none" presentationStyle="pageSheet">
+      <Animated.View 
+        style={[
+          styles.productModalContainer,
+          { transform: [{ translateY: slideAnim }] }
+        ]}
+      >
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        
+        {/* Hero Image Section */}
+        <View style={styles.productHeroSection}>
+          <ImageBackground
+            source={{ uri: imageUri }}
+            style={styles.productHeroImage}
+            imageStyle={{ resizeMode: 'cover' }}
+          >
+            <LinearGradient
+              colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroHeader}>
+                <TouchableOpacity onPress={onClose} style={styles.heroBackButton}>
+                  <Text style={styles.heroBackIcon}>←</Text>
+                </TouchableOpacity>
+                <View style={styles.heroActions}>
+                  {product.sale_price && (
+                    <View style={styles.heroOfferBadge}>
+                      <Text style={styles.heroOfferText}>SALE</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.heroFooter}>
+                {product.average_rating > 0 && (
+                  <View style={styles.heroRatingContainer}>
+                    <View style={styles.heroRating}>
+                      <Text style={styles.heroRatingText}>★ {product.average_rating}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+          </ImageBackground>
         </View>
 
-        <ScrollView style={styles.productModalContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.productImageContainer}>
-            {!imageLoaded && <SkeletonCard height={height * 0.3} borderRadius={0} style={{ width: '100%' }} />}
-            {imageUri && (
-              <Image
-                source={{ uri: imageUri }}
-                style={[styles.productModalImage, !imageLoaded && { opacity: 0, position: 'absolute' }]}
-                onLoadEnd={() => setImageLoaded(true)}
-              />
-            )}
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)']} style={styles.imageOverlay} />
-            {product.sale_price && (
-              <View style={styles.productOfferBadge}>
-                <Text style={styles.offerText}>SALE</Text>
-              </View>
-            )}
-            {product.average_rating > 0 && (
-              <View style={styles.productRatingBadge}>
-                <Text style={styles.ratingText}>★ {product.average_rating}</Text>
-              </View>
-            )}
-          </View>
+        <ScrollView 
+          style={styles.productScrollContent} 
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
+          {/* Product Info Card */}
+          <View style={styles.productInfoCard}>
+            <View style={styles.productTitleSection}>
+              <Text style={styles.productModalName}>{product.name}</Text>
+              <Text style={styles.productModalDescription}>
+                {product.description || `Delicious and fresh ${product.name.toLowerCase()} prepared with finest ingredients. Perfect for any time of the day with authentic flavors that will leave you craving for more.`}
+              </Text>
+            </View>
 
-          <View style={styles.productInfo}>
-            <Text style={styles.productName}>{product.name}</Text>
-            <Text style={styles.productDescription}>
-              {product.description || `Delicious and fresh ${product.name.toLowerCase()} prepared with finest ingredients. Perfect for any time of the day with authentic flavors.`}
-            </Text>
-
-            <View style={styles.productMeta}>
-              <View style={styles.metaItem}>
+            {/* Enhanced Meta Information */}
+            <View style={styles.productMetaGrid}>
+              <View style={styles.metaCardItem}>
                 <View style={styles.metaIconContainer}>
-                  <Text style={styles.metaIcon}>🕒</Text>
+                  <Text style={styles.metaIcon}>⏱</Text>
                 </View>
                 <Text style={styles.metaLabel}>Prep Time</Text>
-                <Text style={styles.metaText}>{product.preparation_time || 25} mins</Text>
+                <Text style={styles.metaValue}>{product.preparation_time || 25} mins</Text>
               </View>
+              
               {product.spice_level && product.spice_level !== 'None' && (
-                <View style={styles.metaItem}>
-                  <View style={styles.metaIconContainer}>
-                    <Text style={styles.metaIcon}>🌶️</Text>
+                <View style={styles.metaCardItem}>
+                  <View style={[styles.metaIconContainer, { backgroundColor: COLORS.errorLight }]}>
+                    <Text style={styles.metaIcon}>🌶</Text>
                   </View>
                   <Text style={styles.metaLabel}>Spice Level</Text>
-                  <Text style={styles.metaText}>{product.spice_level}</Text>
+                  <Text style={styles.metaValue}>{product.spice_level}</Text>
                 </View>
               )}
-              <View style={styles.metaItem}>
-                <View style={styles.metaIconContainer}>
-                  <Text style={styles.metaIcon}>🌟</Text>
+              
+              <View style={styles.metaCardItem}>
+                <View style={[styles.metaIconContainer, { backgroundColor: COLORS.accentLight }]}>
+                  <Text style={styles.metaIcon}>⭐</Text>
                 </View>
                 <Text style={styles.metaLabel}>Category</Text>
-                <Text style={styles.metaText}>{product.is_featured ? 'Featured' : 'Popular'}</Text>
+                <Text style={styles.metaValue}>{product.is_featured ? 'Featured' : 'Popular'}</Text>
               </View>
             </View>
 
+            {/* Ingredients Section */}
             {ingredients.length > 0 && (
-              <View style={styles.ingredientsSection}>
-                <Text style={styles.sectionTitle}>Ingredients</Text>
+              <View style={styles.ingredientsCard}>
+                <Text style={styles.cardSectionTitle}>Fresh Ingredients</Text>
                 <View style={styles.ingredientsList}>
                   {ingredients.map((ingredient, index) => (
-                    <View key={index} style={styles.ingredientTag}>
+                    <View key={index} style={styles.ingredientChip}>
                       <Text style={styles.ingredientText}>{ingredient}</Text>
                     </View>
                   ))}
@@ -365,70 +448,109 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
               </View>
             )}
 
-            <View style={styles.quantitySection}>
-              <Text style={styles.sectionTitle}>Quantity</Text>
-              <View style={styles.quantityControls}>
+            {/* Quantity Selection */}
+            <View style={styles.quantityCard}>
+              <Text style={styles.cardSectionTitle}>Select Quantity</Text>
+              <View style={styles.quantitySelector}>
                 <TouchableOpacity
-                  style={styles.quantityButton}
+                  style={styles.quantityActionButton}
                   onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.quantityButtonText}>-</Text>
+                  <Text style={styles.quantityActionText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.quantityValue}>{quantity}</Text>
+                <View style={styles.quantityDisplay}>
+                  <Text style={styles.quantityDisplayText}>{quantity}</Text>
+                </View>
                 <TouchableOpacity
-                  style={styles.quantityButton}
+                  style={styles.quantityActionButton}
                   onPress={() => setQuantity(quantity + 1)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.quantityButtonText}>+</Text>
+                  <Text style={styles.quantityActionText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </ScrollView>
 
+        {/* Enhanced Sticky Footer */}
         <View style={styles.productModalFooter}>
-          <View style={styles.priceSection}>
-            <View style={styles.priceContainer}>
-              <Text style={styles.totalPrice}>₹{displayPrice * quantity}</Text>
-              {originalPrice && <Text style={styles.originalPrice}>₹{originalPrice * quantity}</Text>}
-            </View>
-            <Text style={styles.priceNote}>Total Amount</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.addToCartButton, adding && { opacity: 0.6 }]}
-            onPress={handleAddToCart}
-            activeOpacity={0.8}
-            disabled={adding}
+          <LinearGradient
+            colors={[COLORS.surface, COLORS.surfaceElevated]}
+            style={styles.footerGradient}
           >
-            <Text style={styles.addToCartButtonText}>
-              {adding ? 'Adding...' : `Add to Cart ${currentQuantity > 0 ? `(${currentQuantity} in cart)` : ''}`}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.priceDisplaySection}>
+              <View style={styles.priceInfo}>
+                <Text style={styles.totalPriceLabel}>Total Amount</Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.totalPriceValue}>₹{formatPrice(displayPrice * quantity)}</Text>
+                  {originalPrice && (
+                    <Text style={styles.originalPriceValue}>₹{formatPrice(originalPrice * quantity)}</Text>
+                  )}
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.addToCartMainButton, adding && styles.addingButton]}
+                onPress={handleAddToCart}
+                activeOpacity={0.85}
+                disabled={adding}
+              >
+                <LinearGradient
+                  colors={adding ? [COLORS.textMuted, COLORS.textMuted] : [COLORS.primary, COLORS.primaryDark]}
+                  style={styles.buttonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.addToCartMainText}>
+                    {adding ? 'Adding...' : `Add to Cart ${currentQuantity > 0 ? `(${currentQuantity})` : ''}`}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
         </View>
-      </SafeAreaView>
+      </Animated.View>
     </Modal>
   );
 };
 
 // Enhanced Floating Cart Component
 const FloatingCart = ({ cartItems, cartTotal, onPress, onClose, syncing }) => {
-  const [slideAnim] = useState(new Animated.Value(100));
+  const [slideAnim] = useState(new Animated.Value(120));
+  const [scaleAnim] = useState(new Animated.Value(0.8));
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
 
   useEffect(() => {
     if (safeCartItems.length > 0) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 80,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
     } else {
-      Animated.timing(slideAnim, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 120,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [safeCartItems.length]);
 
@@ -438,46 +560,60 @@ const FloatingCart = ({ cartItems, cartTotal, onPress, onClose, syncing }) => {
     <Animated.View
       style={[
         styles.floatingCartContainer,
-        { transform: [{ translateY: slideAnim }] }
+        { 
+          transform: [
+            { translateY: slideAnim },
+            { scale: scaleAnim }
+          ] 
+        }
       ]}
     >
       <TouchableOpacity
-        style={styles.floatingCart}
+        style={styles.floatingCartCard}
         onPress={onPress}
         activeOpacity={0.9}
       >
-        <View style={styles.cartLeft}>
-          <View style={styles.cartItemsCount}>
-            <Text style={styles.cartItemsCountText}>{safeCartItems.length}</Text>
+        <LinearGradient
+          colors={[COLORS.primary, COLORS.primaryDark]}
+          style={styles.floatingCartGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <View style={styles.cartLeftContent}>
+            <View style={styles.cartItemsIndicator}>
+              <Text style={styles.cartItemsIndicatorText}>{safeCartItems.length}</Text>
+            </View>
+            <View style={styles.cartMainInfo}>
+              <Text style={styles.cartItemsMainText}>
+                {safeCartItems.length} item{safeCartItems.length > 1 ? 's' : ''} in cart
+              </Text>
+              <Text style={styles.cartSubText}>
+                {syncing ? 'Syncing cart...' : 'Tap to review & checkout'}
+              </Text>
+            </View>
           </View>
-          <View style={styles.cartInfo}>
-            <Text style={styles.cartItemsText}>
-              {safeCartItems.length} item{safeCartItems.length > 1 ? 's' : ''} added
-            </Text>
-            <Text style={styles.cartExtraText}>
-              {syncing ? 'Syncing...' : 'Tap to review order'}
-            </Text>
-          </View>
-        </View>
 
-        <View style={styles.cartRight}>
-          <Text style={styles.cartTotal}>₹{cartTotal}</Text>
-          <Text style={styles.cartViewText}>VIEW CART →</Text>
-        </View>
+          <View style={styles.cartRightContent}>
+            <Text style={styles.cartTotalAmount}>₹{cartTotal}</Text>
+            <View style={styles.viewCartButton}>
+              <Text style={styles.viewCartText}>VIEW →</Text>
+            </View>
+          </View>
+        </LinearGradient>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.closeCartButton}
+        style={styles.cartDismissButton}
         onPress={onClose}
         activeOpacity={0.7}
       >
-        <Text style={styles.closeCartText}>×</Text>
+        <Text style={styles.cartDismissText}>✕</Text>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-// Enhanced Cart Modal with Professional Design
+// Enhanced Cart Modal
 const CartModal = ({ 
   visible, 
   cartItems, 
@@ -497,6 +633,24 @@ const CartModal = ({
   const navigation = useNavigation();
   const [couponCode, setCouponCode] = useState('');
   const [showCouponInput, setShowCouponInput] = useState(false);
+  const slideAnim = useRef(new Animated.Value(height)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 70,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -532,41 +686,45 @@ const CartModal = ({
     const uri = getImageUrl(item.featured_image || item.imageUrl);
     
     return (
-      <View key={`${item.id}-${item.slug || 'item'}`} style={styles.cartItemRow}>
-        <View style={styles.cartItemImageContainer}>
-          {!loaded && <SkeletonCard height={60} borderRadius={BORDER_RADIUS.medium} style={{ width: 60 }} />}
+      <View style={styles.cartItemCard}>
+        <View style={styles.cartItemImageSection}>
+          {!loaded && <SkeletonCard height={70} borderRadius={BORDER_RADIUS.lg} style={{ width: 70 }} />}
           {uri && (
             <Image
               source={{ uri }}
-              style={[styles.cartItemImage, !loaded && { opacity: 0, position: 'absolute' }]}
+              style={[styles.cartItemImageStyle, !loaded && { opacity: 0, position: 'absolute' }]}
               onLoadEnd={() => setLoaded(true)}
             />
           )}
         </View>
         
-        <View style={styles.cartItemInfo}>
-          <Text style={styles.cartItemName}>{item.name}</Text>
+        <View style={styles.cartItemDetails}>
+          <Text style={styles.cartItemTitle}>{item.name}</Text>
           {item.spice_level && item.spice_level !== 'None' && (
-            <Text style={styles.cartItemSpice}>Spice Level: {item.spice_level}</Text>
+            <View style={styles.spiceLevelChip}>
+              <Text style={styles.spiceLevelText}>🌶 {item.spice_level}</Text>
+            </View>
           )}
-          <View style={styles.priceContainer}>
-            <Text style={styles.cartItemPrice}>₹{item.price}</Text>
-          </View>
+          <Text style={styles.cartItemPriceText}>₹{formatPrice(item.price)}</Text>
         </View>
         
-        <View style={styles.quantityControls}>
+        <View style={styles.cartQuantitySection}>
           <TouchableOpacity
-            style={styles.quantityButton}
+            style={styles.cartQuantityButton}
             onPress={() => updateQuantity(item.id, item.quantity - 1)}
+            activeOpacity={0.7}
           >
-            <Text style={styles.quantityButtonText}>-</Text>
+            <Text style={styles.cartQuantityButtonText}>−</Text>
           </TouchableOpacity>
-          <Text style={styles.quantityText}>{item.quantity}</Text>
+          <View style={styles.cartQuantityDisplay}>
+            <Text style={styles.cartQuantityDisplayText}>{item.quantity}</Text>
+          </View>
           <TouchableOpacity
-            style={styles.quantityButton}
+            style={styles.cartQuantityButton}
             onPress={() => updateQuantity(item.id, item.quantity + 1)}
+            activeOpacity={0.7}
           >
-            <Text style={styles.quantityButtonText}>+</Text>
+            <Text style={styles.cartQuantityButtonText}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -574,184 +732,269 @@ const CartModal = ({
   };
 
   return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.cartModal}>
-        <View style={styles.cartModalHeader}>
-          <Text style={styles.cartModalTitle}>Your Order</Text>
-          <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
-            <Text style={styles.modalCloseText}>×</Text>
-          </TouchableOpacity>
+    <View style={styles.cartModalOverlay}>
+      <Animated.View
+        style={[
+          styles.cartModalContent,
+          { transform: [{ translateY: slideAnim }] }
+        ]}
+      >
+        <View style={styles.cartModalHeaderSection}>
+          <View style={styles.modalHandle} />
+          <View style={styles.cartModalHeaderContent}>
+            <Text style={styles.cartModalHeaderTitle}>Your Order</Text>
+            <TouchableOpacity onPress={onClose} style={styles.cartModalCloseButton}>
+              <Text style={styles.cartModalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <ScrollView style={styles.cartItemsList} showsVerticalScrollIndicator={false}>
-          {safeCartItems.map((item) => (
-            <CartItemRow key={`cart-item-${item.id}-${item.cartId}`} item={item} />
-          ))}
+        <ScrollView style={styles.cartItemsScrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.cartItemsContainer}>
+            {safeCartItems.map((item) => (
+              <CartItemRow key={`cart-item-${item.id}-${item.cartId}`} item={item} />
+            ))}
+          </View>
         </ScrollView>
 
-        <View style={styles.cartModalFooter}>
+        {/* Enhanced Footer */}
+        <View style={styles.cartModalFooterSection}>
           {/* Coupon Section */}
-          <View style={styles.couponSection}>
+          <View style={styles.couponSectionCard}>
             {!appliedCoupon && !showCouponInput && (
               <TouchableOpacity 
-                style={styles.couponButton}
+                style={styles.couponApplyButton}
                 onPress={() => setShowCouponInput(true)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.couponButtonText}>Apply Coupon</Text>
+                <Text style={styles.couponApplyIcon}>🎫</Text>
+                <Text style={styles.couponApplyText}>Apply Coupon Code</Text>
+                <Text style={styles.couponApplyArrow}>→</Text>
               </TouchableOpacity>
             )}
             
             {showCouponInput && !appliedCoupon && (
-              <View style={styles.couponInputContainer}>
+              <View style={styles.couponInputSection}>
                 <TextInput
-                  style={styles.couponInput}
+                  style={styles.couponInputField}
                   placeholder="Enter coupon code"
+                  placeholderTextColor={COLORS.textMuted}
                   value={couponCode}
                   onChangeText={setCouponCode}
                   autoCapitalize="characters"
                 />
                 <TouchableOpacity 
-                  style={styles.applyCouponButton}
+                  style={styles.couponSubmitButton}
                   onPress={handleApplyCoupon}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.applyCouponText}>Apply</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.cancelCouponButton}
-                  onPress={() => {
-                    setShowCouponInput(false);
-                    setCouponCode('');
-                  }}
-                >
-                  <Text style={styles.cancelCouponText}>Cancel</Text>
+                  <Text style={styles.couponSubmitText}>Apply</Text>
                 </TouchableOpacity>
               </View>
             )}
             
             {appliedCoupon && (
-              <View style={styles.appliedCouponContainer}>
-                <Text style={styles.appliedCouponText}>
-                  Coupon "{appliedCoupon.code}" applied
-                </Text>
-                <TouchableOpacity onPress={removeCoupon}>
-                  <Text style={styles.removeCouponText}>Remove</Text>
+              <View style={styles.appliedCouponCard}>
+                <View style={styles.appliedCouponInfo}>
+                  <Text style={styles.appliedCouponIcon}>✅</Text>
+                  <View style={styles.appliedCouponDetails}>
+                    <Text style={styles.appliedCouponTitle}>Coupon Applied</Text>
+                    <Text style={styles.appliedCouponCode}>"{appliedCoupon.code}"</Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={removeCoupon} style={styles.removeCouponButton}>
+                  <Text style={styles.removeCouponButtonText}>Remove</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
 
-          <View style={styles.cartSummary}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>₹{subtotal}</Text>
+          {/* Bill Summary */}
+          <View style={styles.billSummaryCard}>
+            <Text style={styles.billSummaryTitle}>Bill Summary</Text>
+            
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Subtotal</Text>
+              <Text style={styles.billValue}>₹{formatPrice(subtotal)}</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Delivery Fee</Text>
-              <Text style={styles.summaryValue}>₹{deliveryFee}</Text>
+            
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Delivery Fee</Text>
+              <Text style={styles.billValue}>₹{formatPrice(deliveryFee)}</Text>
             </View>
+            
             {couponDiscount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: COLORS.success }]}>Coupon Discount</Text>
-                <Text style={[styles.summaryValue, { color: COLORS.success }]}>-₹{couponDiscount}</Text>
+              <View style={styles.billRow}>
+                <Text style={[styles.billLabel, { color: COLORS.success }]}>Coupon Discount</Text>
+                <Text style={[styles.billValue, { color: COLORS.success }]}>-₹{formatPrice(couponDiscount)}</Text>
               </View>
             )}
-            <View style={styles.summaryRowTotal}>
-              <Text style={styles.summaryLabelTotal}>Total Amount</Text>
-              <Text style={styles.summaryValueTotal}>₹{formatPrice(cartTotal)}</Text>
+            
+            <View style={styles.billDivider} />
+            
+            <View style={styles.billTotalRow}>
+              <Text style={styles.billTotalLabel}>Total Amount</Text>
+              <Text style={styles.billTotalValue}>₹{formatPrice(cartTotal)}</Text>
             </View>
           </View>
           
-          <View style={styles.cartModalActions}>
+          {/* Action Buttons */}
+          <View style={styles.cartActionButtons}>
             <TouchableOpacity
-              style={styles.clearCartButton}
+              style={styles.clearCartActionButton}
               onPress={() => { clearCart(); onClose(); }}
+              activeOpacity={0.8}
             >
-              <Text style={styles.clearCartText}>Clear Cart</Text>
+              <Text style={styles.clearCartActionText}>Clear Cart</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
-              style={[styles.checkoutButton, loading && { opacity: 0.6 }]}
+              style={[styles.checkoutActionButton, loading && styles.checkoutDisabled]}
               onPress={handlePlaceOrder}
               disabled={loading}
+              activeOpacity={0.85}
             >
-              <Text style={styles.checkoutButtonText}>
-                {loading ? 'Placing Order...' : 'Place Order'}
-              </Text>
+              <LinearGradient
+                colors={loading ? [COLORS.textMuted, COLORS.textMuted] : [COLORS.primary, COLORS.primaryDark]}
+                style={styles.checkoutButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.checkoutActionText}>
+                  {loading ? 'Processing...' : 'Place Order'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 };
 
-// Bottom Tabs Component
+// Enhanced Bottom Tabs Component
 const BottomTabs = ({ activeTab, cartCount }) => {
   const navigation = useNavigation();
+  const [tabAnimations] = useState(
+    Array(4).fill(0).map(() => new Animated.Value(1))
+  );
   
   const tabs = [
     { id: 'delivery', label: 'Home', icon: '🏠', activeColor: COLORS.primary, onPress: () => navigation.replace('Home') },
-    { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.primary, onPress: () => navigation.replace('Profile') },
-    { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.primary, onPress: () => {} },
-    { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.primary, onPress: () => navigation.replace('MyOrder') },
+    { id: 'dining', label: 'Profile', icon: '👤', activeColor: COLORS.secondary, onPress: () => navigation.replace('Profile') },
+    { id: 'live', label: 'Support', icon: '💬', activeColor: COLORS.accent, onPress: () => {} },
+    { id: 'reorder', label: 'Orders', icon: '📦', activeColor: COLORS.info, onPress: () => navigation.replace('MyOrder') },
   ];
 
+  const handleTabPress = (tab, index) => {
+    Animated.sequence([
+      Animated.timing(tabAnimations[index], { toValue: 0.8, duration: 100, useNativeDriver: true }),
+      Animated.timing(tabAnimations[index], { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    tab.onPress();
+  };
+
   return (
-    <View style={styles.bottomTabContainer}>
-      <View style={styles.bottomTabs}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={styles.tabButton}
-            onPress={tab.onPress}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.tabIconContainer, activeTab === tab.id && styles.activeTabIcon]}>
-              <Text style={[styles.tabIcon, { color: activeTab === tab.id ? tab.activeColor : COLORS.textSecondary }]}>
-                {tab.icon}
-              </Text>
-            </View>
-            <Text style={[styles.tabLabel, { color: activeTab === tab.id ? tab.activeColor : COLORS.textSecondary }]}>
-              {tab.label}
-            </Text>
-            {tab.id === 'reorder' && cartCount > 0 && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{cartCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+    <View style={styles.bottomTabsContainer}>
+      <LinearGradient
+        colors={[COLORS.surface, COLORS.surfaceElevated]}
+        style={styles.bottomTabsGradient}
+      >
+        <View style={styles.bottomTabsContent}>
+          {tabs.map((tab, index) => (
+            <Animated.View
+              key={tab.id}
+              style={[
+                styles.tabButtonContainer,
+                { transform: [{ scale: tabAnimations[index] }] }
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === tab.id && styles.activeTabButton
+                ]}
+                onPress={() => handleTabPress(tab, index)}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.tabIconWrapper,
+                  activeTab === tab.id && [styles.activeTabIconWrapper, { backgroundColor: tab.activeColor + '20' }]
+                ]}>
+                  <Text style={[
+                    styles.tabIcon,
+                    { color: activeTab === tab.id ? tab.activeColor : COLORS.textMuted }
+                  ]}>
+                    {tab.icon}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.tabLabel,
+                  { color: activeTab === tab.id ? tab.activeColor : COLORS.textMuted }
+                ]}>
+                  {tab.label}
+                </Text>
+                {tab.id === 'reorder' && cartCount > 0 && (
+                  <View style={[styles.tabNotificationBadge, { backgroundColor: tab.activeColor }]}>
+                    <Text style={styles.tabNotificationText}>{cartCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </View>
+      </LinearGradient>
     </View>
   );
 };
 
-// Responsive Category Item Component
+// Enhanced Category Item Component
 const CategoryItem = React.memo(({ item, onPress, isSelected }) => {
   const [loaded, setLoaded] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1.05, duration: 150, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+    onPress(item.id, item.name);
+  };
   
   return (
-    <Animated.View style={styles.categoryItem}>
-      <TouchableOpacity onPress={() => onPress(item.id, item.name)} activeOpacity={0.7}>
+    <Animated.View style={[styles.categoryItemContainer, { transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
         <View style={[styles.categoryCard, isSelected && styles.selectedCategoryCard]}>
-          <View style={[styles.categoryIcon, isSelected && styles.selectedCategoryIcon]}>
-            {!loaded && <SkeletonCard height={isTablet ? 70 : 50} borderRadius={16} style={{ width: isTablet ? 70 : 50 }} />}
+          <View style={[styles.categoryIconContainer, isSelected && styles.selectedCategoryIconContainer]}>
+            {!loaded && <SkeletonCard height={isTablet ? 80 : 70} borderRadius={BORDER_RADIUS.xl} style={{ width: isTablet ? 80 : 70 }} />}
             <Image
               source={{ uri: getImageUrl(item.image) }}
               style={[styles.categoryImage, !loaded && { opacity: 0, position: 'absolute' }]}
               onLoadEnd={() => setLoaded(true)}
             />
+            {isSelected && <View style={styles.categorySelectionOverlay} />}
           </View>
           <Text style={[styles.categoryName, isSelected && styles.selectedCategoryName]}>
             {item.name}
           </Text>
-          {isSelected && <View style={styles.categoryIndicator} />}
+          {isSelected && (
+            <View style={styles.categoryActiveIndicator}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.categoryIndicatorGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 });
 
-// Responsive Recommended Card Component  
+// Enhanced Recommended Card Component  
 const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 150;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -759,12 +1002,19 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const cardWidth = (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2;
 
   const handleAdd = async (e) => {
     e.stopPropagation();
     setAdding(true);
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    
     try {
       await addToCart(item, 1, { spice_level: item.spice_level });
     } catch (error) {
@@ -774,56 +1024,77 @@ const RecommendedCard = React.memo(({ item, onPress, addToCart, isItemInCart, ge
     }
   };
 
+  const handleCardPress = () => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+    ]).start();
+    onPress(item);
+  };
+
   return (
-    <TouchableOpacity style={[styles.recommendedCard, { width: cardWidth }]} onPress={() => onPress(item)} activeOpacity={0.9}>
-      <View style={styles.recommendedImageContainer}>
-        {!loaded && <SkeletonCard height={cardWidth * 0.7} borderRadius={0} />}
-        <Image
-          source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
-          style={[styles.recommendedImage, !loaded && { opacity: 0, position: 'absolute' }]}
-          onLoadEnd={() => setLoaded(true)}
-        />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.imageGradient} />
-        {hasDiscount && (
-          <View style={styles.recommendedOfferBadge}>
-            <Text style={styles.offerText}>SALE</Text>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity 
+        style={[styles.recommendedCardNew, { width: cardWidth }]} 
+        onPress={handleCardPress} 
+        activeOpacity={0.95}
+      >
+        <View style={styles.recommendedImageSection}>
+          {!loaded && <SkeletonCard height={cardWidth * 0.65} borderRadius={0} />}
+          <Image
+            source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
+            style={[styles.recommendedImageNew, !loaded && { opacity: 0, position: 'absolute' }]}
+            onLoadEnd={() => setLoaded(true)}
+          />
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.4)']} style={styles.recommendedImageGradient} />
+          
+          {hasDiscount && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>SALE</Text>
+            </View>
+          )}
+          
+          {item.average_rating > 0 && (
+            <View style={styles.ratingBadgeNew}>
+              <Text style={styles.ratingTextNew}>★ {item.average_rating}</Text>
+            </View>
+          )}
+          
+          <View style={styles.deliveryTimeBadge}>
+            <Text style={styles.deliveryTimeBadgeText}>{item.preparation_time || 25}m</Text>
           </View>
-        )}
-        {item.average_rating > 0 && (
-          <View style={styles.recommendedRatingBadge}>
-            <Text style={styles.ratingText}>★ {item.average_rating}</Text>
-          </View>
-        )}
-        <View style={styles.deliveryTime}>
-          <Text style={styles.deliveryTimeText}>{item.preparation_time || 25} mins</Text>
         </View>
-      </View>
-      <View style={styles.recommendedInfo}>
-        <Text style={styles.recommendedName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cuisineType}>
-          {item.spice_level && item.spice_level !== 'None' ? `Spice: ${item.spice_level}` : 'Delicious Food'}
-        </Text>
-        <View style={styles.recommendedFooter}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceText}>₹{displayPrice}</Text>
-            {hasDiscount && <Text style={styles.originalPriceText}>₹{item.price}</Text>}
+        
+        <View style={styles.recommendedContentSection}>
+          <Text style={styles.recommendedNameNew} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.recommendedCuisine}>
+            {item.spice_level && item.spice_level !== 'None' ? `${item.spice_level} Spice` : 'Delicious Food'}
+          </Text>
+          
+          <View style={styles.recommendedFooterNew}>
+            <View style={styles.priceSection}>
+              <Text style={styles.priceTextNew}>₹{formatPrice(displayPrice)}</Text>
+              {hasDiscount && <Text style={styles.originalPriceTextNew}>₹{item.price}</Text>}
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.addButtonNew, inCart && styles.addedButtonNew]}
+              onPress={handleAdd}
+              disabled={adding}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.addButtonTextNew, inCart && styles.addedButtonTextNew]}>
+                {adding ? '•••' : (inCart ? `${quantity}` : 'ADD')}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={[styles.addButton, inCart && styles.addedButton]}
-            onPress={handleAdd}
-            disabled={adding}
-          >
-            <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
-            </Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 });
 
-// Responsive Top Section Card Component
+// Enhanced Top Section Card Component
 const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 180;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -831,12 +1102,19 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const cardWidth = width * (isTablet ? 0.45 : 0.7);
+  const cardWidth = width * (isTablet ? 0.42 : 0.68);
 
   const handleAdd = async (e) => {
     e.stopPropagation();
     setAdding(true);
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    
     try {
       await addToCart(item, 1, { spice_level: item.spice_level });
     } catch (error) {
@@ -847,55 +1125,67 @@ const TopSectionCard = React.memo(({ item, onPress, addToCart, isItemInCart, get
   };
 
   return (
-    <TouchableOpacity style={[styles.topSectionCard, { width: cardWidth }]} onPress={() => onPress(item)} activeOpacity={0.9}>
-      <View style={styles.topSectionImageContainer}>
-        {!loaded && <SkeletonCard height={cardWidth * 0.6} borderRadius={0} />}
-        <Image
-          source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
-          style={[styles.topSectionImage, !loaded && { opacity: 0, position: 'absolute' }]}
-          onLoadEnd={() => setLoaded(true)}
-        />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.imageGradient} />
-        {hasDiscount && (
-          <View style={styles.offerBadge}>
-            <Text style={styles.offerText}>SALE</Text>
-          </View>
-        )}
-        {item.average_rating > 0 && (
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>★ {item.average_rating}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.topSectionInfo}>
-        <Text style={styles.topSectionName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cuisineType}>
-          {item.is_featured ? 'Featured Item' : 'Popular Choice'}
-        </Text>
-        <View style={styles.cardFooter}>
-          <View style={styles.deliveryInfo}>
-            <Text style={styles.deliveryText}>{item.preparation_time || 30} mins</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceText}>₹{displayPrice}</Text>
-              {hasDiscount && <Text style={styles.originalPriceText}>₹{item.price}</Text>}
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity 
+        style={[styles.topSectionCardNew, { width: cardWidth }]} 
+        onPress={() => onPress(item)} 
+        activeOpacity={0.95}
+      >
+        <View style={styles.topSectionImageSection}>
+          {!loaded && <SkeletonCard height={cardWidth * 0.55} borderRadius={0} />}
+          <Image
+            source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
+            style={[styles.topSectionImageNew, !loaded && { opacity: 0, position: 'absolute' }]}
+            onLoadEnd={() => setLoaded(true)}
+          />
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.topSectionImageGradient} />
+          
+          {hasDiscount && (
+            <View style={styles.topDiscountBadge}>
+              <Text style={styles.topDiscountText}>SALE</Text>
             </View>
-          </View>
-          <TouchableOpacity
-            style={[styles.addButton, inCart && styles.addedButton]}
-            onPress={handleAdd}
-            disabled={adding}
-          >
-            <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
-            </Text>
-          </TouchableOpacity>
+          )}
+          
+          {item.average_rating > 0 && (
+            <View style={styles.topRatingBadge}>
+              <Text style={styles.topRatingText}>★ {item.average_rating}</Text>
+            </View>
+          )}
         </View>
-      </View>
-    </TouchableOpacity>
+        
+        <View style={styles.topSectionContentNew}>
+          <Text style={styles.topSectionNameNew} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.topSectionCuisine}>
+            {item.is_featured ? 'Featured Special' : 'Popular Choice'}
+          </Text>
+          
+          <View style={styles.topSectionFooterNew}>
+            <View style={styles.topDeliveryInfo}>
+              <Text style={styles.topDeliveryText}>{item.preparation_time || 30} mins</Text>
+              <View style={styles.topPriceContainer}>
+                <Text style={styles.topPriceText}>₹{formatPrice(displayPrice)}</Text>
+                {hasDiscount && <Text style={styles.topOriginalPrice}>₹{item.price}</Text>}
+              </View>
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.topAddButton, inCart && styles.topAddedButton]}
+              onPress={handleAdd}
+              disabled={adding}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.topAddButtonText, inCart && styles.topAddedButtonText]}>
+                {adding ? '•••' : (inCart ? `${quantity}` : 'ADD')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 });
 
-// Responsive Full Row Card Component
+// Enhanced Full Row Card Component
 const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getItemQuantity }) => {
   const displayPrice = item.sale_price || item.price || 220;
   const hasDiscount = item.sale_price && item.price !== item.sale_price;
@@ -903,12 +1193,19 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
   const [adding, setAdding] = useState(false);
   const inCart = isItemInCart ? isItemInCart(item.id) : false;
   const quantity = getItemQuantity ? getItemQuantity(item.id) : 0;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const imageSize = isTablet ? 120 : 100;
+  const imageSize = isTablet ? 130 : 110;
 
   const handleAdd = async (e) => {
     e.stopPropagation();
     setAdding(true);
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.98, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+    
     try {
       await addToCart(item, 1, { spice_level: item.spice_level });
     } catch (error) {
@@ -919,56 +1216,63 @@ const FullRowCard = React.memo(({ item, onPress, addToCart, isItemInCart, getIte
   };
 
   return (
-    <TouchableOpacity style={styles.fullCard} onPress={() => onPress(item)} activeOpacity={0.95}>
-      <View style={[styles.fullCardImageContainer, { width: imageSize }]}>
-        {!loaded && <SkeletonCard height={imageSize} borderRadius={0} style={{ width: imageSize }} />}
-        <Image
-          source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
-          style={[styles.fullCardImage, { width: imageSize, height: imageSize }, !loaded && { opacity: 0, position: 'absolute' }]}
-          onLoadEnd={() => setLoaded(true)}
-        />
-        {hasDiscount && (
-          <View style={styles.fullCardOfferBadge}>
-            <Text style={styles.offerText}>SALE</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.fullCardContent}>
-        <Text style={styles.fullCardName}>{item.name}</Text>
-        <Text style={styles.cuisineType}>
-          {item.is_featured ? 'Premium Restaurant' : 'Popular Restaurant'}
-        </Text>
-        <View style={styles.fullCardMeta}>
-          <View style={styles.fullCardLeft}>
-            {item.average_rating > 0 && (
-              <View style={styles.fullCardRating}>
-                <Text style={styles.ratingText}>★ {item.average_rating}</Text>
-              </View>
-            )}
-            <View style={styles.deliveryPriceRow}>
-              <Text style={styles.deliveryText}>{item.preparation_time || 25} mins</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceText}>₹{displayPrice}</Text>
-                {hasDiscount && <Text style={styles.originalPriceText}>₹{item.price}</Text>}
-              </View>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity style={styles.fullCardNew} onPress={() => onPress(item)} activeOpacity={0.95}>
+        <View style={[styles.fullCardImageSection, { width: imageSize }]}>
+          {!loaded && <SkeletonCard height={imageSize} borderRadius={BORDER_RADIUS.xl} style={{ width: imageSize }} />}
+          <Image
+            source={{ uri: getImageUrl(item.featured_image || item.imageUrl) }}
+            style={[styles.fullCardImageNew, { width: imageSize, height: imageSize }, !loaded && { opacity: 0, position: 'absolute' }]}
+            onLoadEnd={() => setLoaded(true)}
+          />
+          {hasDiscount && (
+            <View style={styles.fullDiscountBadge}>
+              <Text style={styles.fullDiscountText}>SALE</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.fullCardContentNew}>
+          <View style={styles.fullCardMainInfo}>
+            <Text style={styles.fullCardNameNew}>{item.name}</Text>
+            <Text style={styles.fullCardCuisine}>
+              {item.is_featured ? 'Premium Restaurant' : 'Popular Restaurant'}
+            </Text>
+            
+            <View style={styles.fullCardMetaRow}>
+              {item.average_rating > 0 && (
+                <View style={styles.fullRatingChip}>
+                  <Text style={styles.fullRatingText}>★ {item.average_rating}</Text>
+                </View>
+              )}
+              <Text style={styles.fullDeliveryText}>{item.preparation_time || 25} mins</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.addButton, inCart && styles.addedButton]}
-            onPress={handleAdd}
-            disabled={adding}
-          >
-            <Text style={[styles.addButtonText, inCart && styles.addedButtonText]}>
-              {adding ? 'ADDING' : (inCart ? `IN CART (${quantity})` : 'ADD')}
-            </Text>
-          </TouchableOpacity>
+          
+          <View style={styles.fullCardActions}>
+            <View style={styles.fullPriceInfo}>
+              <Text style={styles.fullPriceText}>₹{formatPrice(displayPrice)}</Text>
+              {hasDiscount && <Text style={styles.fullOriginalPrice}>₹{item.price}</Text>}
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.fullAddButton, inCart && styles.fullAddedButton]}
+              onPress={handleAdd}
+              disabled={adding}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.fullAddButtonText, inCart && styles.fullAddedButtonText]}>
+                {adding ? '•••' : (inCart ? `${quantity}` : 'ADD')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 });
 
-// Main Component with enhanced professional design
+// Main Component with Professional Design
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeSlide, setActiveSlide] = useState(0);
@@ -991,6 +1295,42 @@ export default function HomeScreen() {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
 
   const cartHookResult = useCart();
+
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const flatListRef = useRef(null);
+
+  // Enhanced banner data
+  const banners = [
+    { 
+      id: '1', 
+      title: 'Free Delivery', 
+      subtitle: 'On orders above ₹199', 
+      emoji: '🚚', 
+      bg: [COLORS.primary, COLORS.primaryDark],
+      pattern: '🍕🍔🍟'
+    },
+    { 
+      id: '2', 
+      title: '50% OFF', 
+      subtitle: 'On your first order', 
+      emoji: '🎉', 
+      bg: [COLORS.secondary, '#357ABD'],
+      pattern: '🎊🎈🎁'
+    },
+    { 
+      id: '3', 
+      title: 'Premium Plus', 
+      subtitle: 'Unlimited free delivery', 
+      emoji: '👑', 
+      bg: [COLORS.accent, '#E6A429'],
+      pattern: '⭐💫✨'
+    },
+  ];
+
+  const VALID_SECTION_TYPES = ['topSection', 'recommendedForYouSection', 'fullCardSection'];
 
   // Enhanced address fetching
   useEffect(() => {
@@ -1035,18 +1375,27 @@ export default function HomeScreen() {
     fetchAddresses();
   }, []);
 
-  // Address handlers
-  const handleAddressSelect = (address) => {
-    setSelectedAddressId(address.id);
-    setaddressnow(address.full_address || address.area || 'Address');
-    setShowAddressDropdown(false);
-  };
+  useEffect(() => {
+    fetchInitialData();
+    animateIn();
+    const clear = setupBannerCarousel();
+    return clear;
+  }, []);
 
-  const handleAddressDropdownToggle = () => {
-    if (allAddresses.length > 1) {
-      setShowAddressDropdown(true);
+  useEffect(() => {
+    if (selectedCategoryId) {
+      fetchSectionsForCategory(selectedCategoryId);
     }
-  };
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (Array.isArray(cartItems) && cartItems.length > 0) {
+        refreshCart();
+      }
+    });
+    return unsubscribe;
+  }, [navigation, cartItems]);
 
   // Cart hook with safe destructuring
   const {
@@ -1071,46 +1420,26 @@ export default function HomeScreen() {
     refreshCart = () => Promise.resolve()
   } = cartHookResult || {};
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const flatListRef = useRef(null);
-
-  const banners = [
-    { id: '1', title: 'Free Delivery', subtitle: 'On orders above ₹199', emoji: '🚚', bg: [COLORS.primary, COLORS.primaryDark] },
-    { id: '2', title: '50% OFF', subtitle: 'On your first order', emoji: '🎉', bg: [COLORS.secondary, COLORS.primaryDark] },
-    { id: '3', title: 'Premium', subtitle: 'Unlimited free delivery', emoji: '👑', bg: [COLORS.accent, COLORS.secondary] },
-  ];
-
-  const VALID_SECTION_TYPES = ['topSection', 'recommendedForYouSection', 'fullCardSection'];
-
-  useEffect(() => {
-    fetchInitialData();
-    animateIn();
-    const clear = setupBannerCarousel();
-    return clear;
-  }, []);
-
-  useEffect(() => {
-    if (selectedCategoryId) {
-      fetchSectionsForCategory(selectedCategoryId);
-    }
-  }, [selectedCategoryId]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (Array.isArray(cartItems) && cartItems.length > 0) {
-        refreshCart();
-      }
-    });
-    return unsubscribe;
-  }, [navigation, cartItems]);
-
   const animateIn = () => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { 
+        toValue: 1, 
+        duration: 800, 
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true 
+      }),
+      Animated.timing(slideAnim, { 
+        toValue: 0, 
+        duration: 600, 
+        easing: Easing.out(Easing.back(1.2)),
+        useNativeDriver: true 
+      }),
+      Animated.timing(scaleAnim, { 
+        toValue: 1, 
+        duration: 500, 
+        easing: Easing.out(Easing.back(1.1)),
+        useNativeDriver: true 
+      }),
     ]).start();
   };
 
@@ -1121,7 +1450,7 @@ export default function HomeScreen() {
         flatListRef.current?.scrollToIndex({ index: next, animated: true });
         return next;
       });
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   };
 
@@ -1176,10 +1505,6 @@ export default function HomeScreen() {
 
   const handleCategoryPress = (categoryId) => {
     setSelectedCategoryId(categoryId);
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
   };
 
   const onRefresh = async () => {
@@ -1197,128 +1522,34 @@ export default function HomeScreen() {
   const handleCartPress = () => setShowCartModal(true);
   const handleCloseCart = () => clearCart();
 
-  // Enhanced Skeleton Components
-  const BannerSkeleton = () => (
-    <View style={{ marginVertical: 16 }}>
-      <View style={{ paddingHorizontal: SCREEN_PADDING }}>
-        <SkeletonCard height={height * 0.22} borderRadius={BORDER_RADIUS.large} style={{ width: width - (SCREEN_PADDING * 2) }} />
-      </View>
-      <View style={styles.dotsContainer}>
-        {[0, 1, 2].map(i => <SkeletonCircle key={i} size={6} style={{ marginHorizontal: 3 }} />)}
-      </View>
-    </View>
-  );
-
-  const CategoriesSkeleton = () => (
-    <View style={[styles.section, { paddingVertical: 8 }]}>
-      <SkeletonLine height={FONTS.xl} width={isTablet ? 220 : 180} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.categoriesContainer, { paddingTop: 16 }]}>
-        {[...Array(6)].map((_, i) => (
-          <View key={`cat-skel-${i}`} style={{ alignItems: 'center', marginRight: isTablet ? 32 : 24 }}>
-            <SkeletonCard height={isTablet ? 70 : 64} borderRadius={20} style={{ width: isTablet ? 70 : 64 }} />
-            <SkeletonLine height={FONTS.sm} width={50} style={{ marginTop: 8 }} />
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const RecommendedSkeleton = () => {
-    const cardWidth = (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2;
-    
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
-            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
-          </View>
-        </View>
-        <View style={styles.recommendedContainer}>
-          <View style={styles.recommendedRow}>
-            {[...Array(2)].map((_, i) => (
-              <View key={`rec-row1-${i}`} style={[styles.recommendedCard, { width: cardWidth }]}>
-                <SkeletonCard height={cardWidth * 0.7} borderRadius={0} />
-                <View style={{ padding: 12 }}>
-                  <SkeletonLine height={FONTS.sm} width={'80%'} />
-                  <SkeletonLine height={FONTS.xs} width={'40%'} style={{ marginTop: 8 }} />
-                  <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} style={{ marginTop: 12 }} />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
+  // Address handlers
+  const handleAddressSelect = (address) => {
+    setSelectedAddressId(address.id);
+    setaddressnow(address.full_address || address.area || 'Address');
+    setShowAddressDropdown(false);
   };
 
-  const TopSectionSkeleton = () => {
-    const cardWidth = width * (isTablet ? 0.45 : 0.7);
-    
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
-            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
-          </View>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topSectionContainer}>
-          {[...Array(3)].map((_, i) => (
-            <View key={`top-skel-${i}`} style={[styles.topSectionCard, { width: cardWidth, paddingBottom: 12 }]}>
-              <SkeletonCard height={cardWidth * 0.6} borderRadius={0} />
-              <View style={{ padding: 12 }}>
-                <SkeletonLine height={FONTS.base} width={'70%'} />
-                <SkeletonLine height={FONTS.xs} width={'50%'} style={{ marginTop: 8 }} />
-                <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} style={{ marginTop: 12 }} />
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-    );
+  const handleAddressDropdownToggle = () => {
+    if (allAddresses.length > 1) {
+      setShowAddressDropdown(true);
+    }
   };
 
-  const FullCardSkeleton = () => {
-    const imageSize = isTablet ? 120 : 100;
-    
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View>
-            <SkeletonLine height={FONTS.xl} width={isTablet ? 200 : 160} />
-            <SkeletonLine height={FONTS.sm} width={isTablet ? 140 : 100} style={{ marginTop: 6 }} />
-          </View>
+  // Enhanced render functions
+  const renderBanner = ({ item, index }) => (
+    <View style={styles.bannerContainer}>
+      <LinearGradient colors={item.bg} style={styles.enhancedBannerCard}>
+        <View style={styles.bannerPattern}>
+          <Text style={styles.bannerPatternText}>{item.pattern}</Text>
         </View>
-        <View style={styles.fullCardContainer}>
-          {[...Array(3)].map((_, i) => (
-            <View key={`full-skel-${i}`} style={styles.fullCard}>
-              <SkeletonCard height={imageSize} borderRadius={0} style={{ width: imageSize }} />
-              <View style={styles.fullCardContent}>
-                <SkeletonLine height={FONTS.base} width={'70%'} />
-                <View style={styles.fullCardMeta}>
-                  <SkeletonLine height={FONTS.xs} width={60} />
-                  <SkeletonLine height={FONTS.sm} width={80} />
-                </View>
-                <SkeletonLine height={36} width={'100%'} borderRadius={BORDER_RADIUS.medium} />
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderBanner = ({ item }) => (
-    <View style={styles.bannerWrapper}>
-      <LinearGradient colors={item.bg} style={styles.bannerCard}>
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerLeft}>
-            <Text style={styles.bannerEmoji}>{item.emoji}</Text>
-            <Text style={styles.bannerTitle}>{item.title}</Text>
-            <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-            <TouchableOpacity style={styles.bannerButton}>
-              <Text style={styles.bannerButtonText}>Order Now</Text>
+        <View style={styles.bannerContentSection}>
+          <View style={styles.bannerMainContent}>
+            <Text style={styles.bannerEmojiNew}>{item.emoji}</Text>
+            <Text style={styles.bannerTitleNew}>{item.title}</Text>
+            <Text style={styles.bannerSubtitleNew}>{item.subtitle}</Text>
+            <TouchableOpacity style={styles.bannerCallToAction} activeOpacity={0.8}>
+              <Text style={styles.bannerButtonTextNew}>Order Now</Text>
+              <Text style={styles.bannerArrow}>→</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1360,55 +1591,137 @@ export default function HomeScreen() {
     />
   );
 
+  // Enhanced skeleton components
+  const BannerSkeleton = () => (
+    <View style={styles.bannerSkeletonContainer}>
+      <SkeletonCard height={height * 0.24} borderRadius={BORDER_RADIUS.xxl} style={{ marginHorizontal: SCREEN_PADDING }} />
+      <View style={styles.dotsContainer}>
+        {[0, 1, 2].map(i => <SkeletonCircle key={i} size={8} style={{ marginHorizontal: 4 }} />)}
+      </View>
+    </View>
+  );
+
+  const CategoriesSkeleton = () => (
+    <View style={styles.section}>
+      <SkeletonLine height={FONTS.xxl} width={isTablet ? 280 : 220} style={{ marginBottom: SPACING.lg }} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollContainer}>
+        {[...Array(6)].map((_, i) => (
+          <View key={`cat-skel-${i}`} style={styles.categorySkeletonItem}>
+            <SkeletonCard height={isTablet ? 80 : 70} borderRadius={BORDER_RADIUS.xl} style={{ width: isTablet ? 80 : 70 }} />
+            <SkeletonLine height={FONTS.sm} width={60} style={{ marginTop: SPACING.sm }} />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
   const renderSection = (section, index) => {
     if (!section || !section.sectionData || section.sectionData.length === 0) return null;
     
     const sectionKey = `${section.type}-${section.id}-${index}`;
-    const getSubtitle = (type) => {
+    const getSectionConfig = (type) => {
       switch (type) {
-        case 'recommendedForYouSection': return 'Curated just for you';
-        case 'topSection': return 'Most popular nearby';
-        case 'fullCardSection': return 'Premium dining options';
-        default: return 'Explore more';
+        case 'recommendedForYouSection': 
+          return { 
+            subtitle: 'Curated specially for you', 
+            emoji: '🍽️',
+            color: COLORS.primary 
+          };
+        case 'topSection': 
+          return { 
+            subtitle: 'Most popular in your area', 
+            emoji: '🔥',
+            color: COLORS.secondary 
+          };
+        case 'fullCardSection': 
+          return { 
+            subtitle: 'Premium dining experiences', 
+            emoji: '⭐',
+            color: COLORS.accent 
+          };
+        default: 
+          return { 
+            subtitle: 'Discover amazing food', 
+            emoji: '🎯',
+            color: COLORS.info 
+          };
       }
     };
 
+    const config = getSectionConfig(section.type);
+
     if (section.type === 'recommendedForYouSection') {
       return (
-        <Animated.View key={sectionKey} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>{section.name}</Text>
-              <Text style={styles.sectionSubtitle}>{getSubtitle(section.type)}</Text>
+        <Animated.View key={sectionKey} style={[styles.section, { opacity: fadeAnim }]}>
+          <View style={styles.enhancedSectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <View style={styles.sectionIconContainer}>
+                <Text style={styles.sectionEmoji}>{config.emoji}</Text>
+              </View>
+              <View style={styles.sectionTextContainer}>
+                <Text style={styles.sectionTitleNew}>{section.name}</Text>
+                <Text style={styles.sectionSubtitleNew}>{config.subtitle}</Text>
+              </View>
             </View>
           </View>
+          
           {sectionsLoading ? (
-            <RecommendedSkeleton />
+            <View style={styles.recommendedSkeletonGrid}>
+              {[...Array(4)].map((_, i) => (
+                <SkeletonCard 
+                  key={i} 
+                  height={200} 
+                  borderRadius={BORDER_RADIUS.xl} 
+                  style={{ 
+                    width: (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2,
+                    marginBottom: CARD_SPACING 
+                  }} 
+                />
+              ))}
+            </View>
           ) : (
             <FlatList
               data={section.sectionData.slice(0, 6)}
               renderItem={renderRecommendedItem}
               keyExtractor={(item) => `${sectionKey}-recommended-${item.id}`}
               numColumns={2}
-              contentContainerStyle={styles.recommendedContainer}
+              contentContainerStyle={styles.recommendedGridContainer}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: CARD_SPACING }} />}
-              columnWrapperStyle={styles.recommendedRow}
+              columnWrapperStyle={styles.recommendedGridRow}
             />
           )}
         </Animated.View>
       );
     } else if (section.type === 'topSection') {
       return (
-        <Animated.View key={sectionKey} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>{section.name}</Text>
-              <Text style={styles.sectionSubtitle}>{getSubtitle(section.type)}</Text>
+        <Animated.View key={sectionKey} style={[styles.section, { opacity: fadeAnim }]}>
+          <View style={styles.enhancedSectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <View style={[styles.sectionIconContainer, { backgroundColor: config.color + '20' }]}>
+                <Text style={styles.sectionEmoji}>{config.emoji}</Text>
+              </View>
+              <View style={styles.sectionTextContainer}>
+                <Text style={styles.sectionTitleNew}>{section.name}</Text>
+                <Text style={styles.sectionSubtitleNew}>{config.subtitle}</Text>
+              </View>
             </View>
           </View>
+          
           {sectionsLoading ? (
-            <TopSectionSkeleton />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.topSectionSkeletonContainer}>
+              {[...Array(3)].map((_, i) => (
+                <SkeletonCard 
+                  key={i} 
+                  height={180} 
+                  borderRadius={BORDER_RADIUS.xl} 
+                  style={{ 
+                    width: width * (isTablet ? 0.42 : 0.68),
+                    marginRight: CARD_SPACING 
+                  }} 
+                />
+              ))}
+            </ScrollView>
           ) : (
             <FlatList
               data={section.sectionData}
@@ -1416,8 +1729,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => `${sectionKey}-top-${item.id}`}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.topSectionContainer}
-              snapToInterval={width * (isTablet ? 0.45 : 0.75)}
+              contentContainerStyle={styles.topSectionScrollContainer}
+              snapToInterval={width * (isTablet ? 0.45 : 0.72)}
               decelerationRate="fast"
             />
           )}
@@ -1425,17 +1738,32 @@ export default function HomeScreen() {
       );
     } else if (section.type === 'fullCardSection') {
       return (
-        <Animated.View key={sectionKey} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>{section.name}</Text>
-              <Text style={styles.sectionSubtitle}>{getSubtitle(section.type)}</Text>
+        <Animated.View key={sectionKey} style={[styles.section, { opacity: fadeAnim }]}>
+          <View style={styles.enhancedSectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <View style={[styles.sectionIconContainer, { backgroundColor: config.color + '20' }]}>
+                <Text style={styles.sectionEmoji}>{config.emoji}</Text>
+              </View>
+              <View style={styles.sectionTextContainer}>
+                <Text style={styles.sectionTitleNew}>{section.name}</Text>
+                <Text style={styles.sectionSubtitleNew}>{config.subtitle}</Text>
+              </View>
             </View>
           </View>
+          
           {sectionsLoading ? (
-            <FullCardSkeleton />
+            <View style={styles.fullCardSkeletonContainer}>
+              {[...Array(3)].map((_, i) => (
+                <SkeletonCard 
+                  key={i} 
+                  height={140} 
+                  borderRadius={BORDER_RADIUS.xl} 
+                  style={{ marginBottom: CARD_SPACING }} 
+                />
+              ))}
+            </View>
           ) : (
-            <View style={styles.fullCardContainer}>
+            <View style={styles.fullCardSectionContainer}>
               {section.sectionData.slice(0, 4).map((item, itemIndex) => (
                 <View key={`${sectionKey}-full-${item.id}-${itemIndex}`}>
                   {renderFullCardItem({ item })}
@@ -1449,39 +1777,44 @@ export default function HomeScreen() {
     return null;
   };
 
-  // Show professional loading screen
+  // Enhanced loading screen
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.locationContainer}>
-              <TouchableOpacity 
-                style={styles.locationButton} 
-                onPress={handleAddressDropdownToggle}
-                disabled={allAddresses.length <= 1 || loadingAddresses}
-              >
-                <Text style={styles.locationText} numberOfLines={2} ellipsizeMode="tail">
-                  📍 {loadingAddresses ? 'Loading...' : formatAddress(addressnow)}
-                </Text>
-                {allAddresses.length > 1 && !loadingAddresses && (
-                  <Text style={styles.dropdownIcon}>⌄</Text>
-                )}
-              </TouchableOpacity>
+        
+        <View style={styles.headerNew}>
+          <View style={styles.headerTopNew}>
+            <View style={styles.locationSection}>
+              <SkeletonLine height={FONTS.base} width={200} />
+              <SkeletonLine height={FONTS.sm} width={120} style={{ marginTop: 4 }} />
             </View>
-            <SkeletonCircle size={isTablet ? 44 : 36} />
+            <SkeletonCircle size={isTablet ? 48 : 40} />
           </View>
-          <View style={styles.searchContainer}>
-            <SkeletonLine height={FONTS.sm} width={'100%'} />
+          <View style={styles.searchSection}>
+            <SkeletonLine height={50} width={'100%'} borderRadius={BORDER_RADIUS.xl} />
           </View>
         </View>
+        
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <BannerSkeleton />
           <CategoriesSkeleton />
-          <RecommendedSkeleton />
-          <TopSectionSkeleton />
-          <FullCardSkeleton />
+          <View style={styles.section}>
+            <SkeletonLine height={FONTS.xxl} width={240} style={{ marginBottom: SPACING.lg }} />
+            <View style={styles.recommendedSkeletonGrid}>
+              {[...Array(4)].map((_, i) => (
+                <SkeletonCard 
+                  key={i} 
+                  height={200} 
+                  borderRadius={BORDER_RADIUS.xl} 
+                  style={{ 
+                    width: (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2,
+                    marginBottom: CARD_SPACING 
+                  }} 
+                />
+              ))}
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -1491,43 +1824,63 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.locationContainer}>
-            <TouchableOpacity 
-              style={styles.locationButton}
-              onPress={handleAddressDropdownToggle}
-              disabled={allAddresses.length <= 1}
-            >
-              <Text style={styles.locationText} numberOfLines={2} ellipsizeMode="tail">
-                📍 {loadingAddresses ? 'Loading...' : formatAddress(addressnow)}
-              </Text>
-              {allAddresses.length > 1 && (
-                <Text style={styles.dropdownIcon}>⌄</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => navigation.replace('Profile')}
-            >
-              <View style={styles.profileIcon}>
-                <Text style={styles.profileIconText}>👤</Text>
+      {/* Enhanced Professional Header */}
+      <Animated.View style={[
+        styles.headerNew, 
+        { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }] 
+        }
+      ]}>
+        <View style={styles.headerTopNew}>
+          <TouchableOpacity 
+            style={styles.locationSection}
+            onPress={handleAddressDropdownToggle}
+            disabled={allAddresses.length <= 1}
+            activeOpacity={0.8}
+          >
+            <View style={styles.locationMainInfo}>
+              <Text style={styles.locationLabel}>Deliver to</Text>
+              <View style={styles.locationAddressRow}>
+                <Text style={styles.locationAddressText} numberOfLines={1} ellipsizeMode="tail">
+                  {loadingAddresses ? 'Loading location...' : formatAddress(addressnow)}
+                </Text>
+                {allAddresses.length > 1 && !loadingAddresses && (
+                  <Text style={styles.locationDropdownIcon}>⌄</Text>
+                )}
               </View>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.profileButtonNew}
+            onPress={() => navigation.replace('Profile')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[COLORS.primaryLight, COLORS.primaryUltraLight]}
+              style={styles.profileButtonGradient}
+            >
+              <Text style={styles.profileIconNew}>👤</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.searchContainer} activeOpacity={0.8}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <Text style={styles.searchPlaceholder}>Search for restaurant, cuisine or a dish</Text>
+        <TouchableOpacity style={styles.searchSection} activeOpacity={0.9}>
+          <LinearGradient
+            colors={[COLORS.surface, COLORS.surfaceAlt]}
+            style={styles.searchGradient}
+          >
+            <Text style={styles.searchIconNew}>🔍</Text>
+            <Text style={styles.searchPlaceholderNew}>Search for food, restaurants, cuisines...</Text>
+            <View style={styles.searchMicrophone}>
+              <Text style={styles.microphoneIcon}>🎤</Text>
+            </View>
+          </LinearGradient>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
-      {/* Main Content */}
+      {/* Enhanced Main Content */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -1538,11 +1891,18 @@ export default function HomeScreen() {
             onRefresh={onRefresh}
             colors={[COLORS.primary]}
             tintColor={COLORS.primary}
+            progressViewOffset={20}
           />
         }
       >
         {/* Enhanced Banner Carousel */}
-        <Animated.View style={[styles.carouselSection, { opacity: fadeAnim }]}>
+        <Animated.View style={[
+          styles.carouselSection, 
+          { 
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }] 
+          }
+        ]}>
           <FlatList
             ref={flatListRef}
             data={banners}
@@ -1556,30 +1916,53 @@ export default function HomeScreen() {
               setActiveSlide(idx);
             }}
             viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-            snapToInterval={width - (SCREEN_PADDING * 2)}
+            snapToInterval={width - (SCREEN_PADDING * 1.5)}
             decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING }}
+            contentContainerStyle={{ paddingHorizontal: SCREEN_PADDING * 0.75 }}
           />
           <View style={styles.dotsContainer}>
             {banners.map((_, index) => (
-              <View key={index} style={[styles.dot, activeSlide === index && styles.activeDot]} />
+              <TouchableOpacity 
+                key={index} 
+                style={[styles.dotNew, activeSlide === index && styles.activeDotNew]} 
+                onPress={() => {
+                  setActiveSlide(index);
+                  flatListRef.current?.scrollToIndex({ index, animated: true });
+                }}
+                activeOpacity={0.7}
+              />
             ))}
           </View>
         </Animated.View>
 
-        {/* Enhanced Categories */}
+        {/* Enhanced Categories Section */}
         {homeFilters.length > 0 ? (
-          <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>What's on your mind?</Text>
+          <Animated.View style={[
+            styles.section, 
+            { 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }] 
+            }
+          ]}>
+            <View style={styles.enhancedSectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={styles.sectionIconContainer}>
+                  <Text style={styles.sectionEmoji}>🤔</Text>
+                </View>
+                <View style={styles.sectionTextContainer}>
+                  <Text style={styles.sectionTitleNew}>What's on your mind?</Text>
+                  <Text style={styles.sectionSubtitleNew}>Choose your favorite cuisine</Text>
+                </View>
+              </View>
             </View>
+            
             <FlatList
               data={homeFilters}
               renderItem={renderCategory}
               keyExtractor={(item) => item.id.toString()}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesContainer}
+              contentContainerStyle={styles.categoriesScrollContainer}
             />
           </Animated.View>
         ) : (
@@ -1592,19 +1975,37 @@ export default function HomeScreen() {
         ) : (
           sectionsLoading ? (
             <>
-              <RecommendedSkeleton />
-              <TopSectionSkeleton />
-              <FullCardSkeleton />
+              <View style={styles.section}>
+                <SkeletonLine height={FONTS.xxl} width={240} style={{ marginBottom: SPACING.lg }} />
+                <View style={styles.recommendedSkeletonGrid}>
+                  {[...Array(4)].map((_, i) => (
+                    <SkeletonCard 
+                      key={i} 
+                      height={200} 
+                      borderRadius={BORDER_RADIUS.xl} 
+                      style={{ 
+                        width: (width - (SCREEN_PADDING * 2) - CARD_SPACING) / 2,
+                        marginBottom: CARD_SPACING 
+                      }} 
+                    />
+                  ))}
+                </View>
+              </View>
             </>
           ) : (
-            <View style={styles.noSectionsContainer}>
-              <Text style={styles.noSectionsText}>Discover amazing restaurants in your area</Text>
+            <View style={styles.noContentContainer}>
+              <Text style={styles.noContentEmoji}>🍽️</Text>
+              <Text style={styles.noContentTitle}>Discover Amazing Food</Text>
+              <Text style={styles.noContentSubtitle}>Explore restaurants and cuisines in your area</Text>
             </View>
           )
         )}
+        
+        {/* Extra padding for floating elements */}
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Product Detail Modal */}
+      {/* Enhanced Modals */}
       <ProductDetailModal
         visible={showProductModal}
         product={selectedProduct}
@@ -1613,7 +2014,6 @@ export default function HomeScreen() {
         addToCart={addToCart}
       />
 
-      {/* Floating Cart */}
       <FloatingCart
         cartItems={cartItems}
         cartTotal={formatPrice(cartTotal)}
@@ -1622,7 +2022,6 @@ export default function HomeScreen() {
         syncing={syncing}
       />
 
-      {/* Cart Modal */}
       <CartModal
         visible={showCartModal}
         cartItems={cartItems}
@@ -1641,7 +2040,6 @@ export default function HomeScreen() {
         navigation={navigation} 
       />
 
-      {/* Address Dropdown Modal */}
       <AddressDropdownModal
         visible={showAddressDropdown}
         addresses={allAddresses}
@@ -1650,15 +2048,15 @@ export default function HomeScreen() {
         onClose={() => setShowAddressDropdown(false)}
       />
 
-      {/* Bottom Tabs */}
+      {/* Enhanced Bottom Tabs */}
       <BottomTabs activeTab={activeTab} cartCount={cartCount} />
 
-      {/* Floating Girl Assistant */}
+      {/* Floating Assistant */}
       <FloatingGirlAssistant
         defaultVisible={true}
-        size={isTablet ? 80 : 60}
+        size={isTablet ? 85 : 65}
         startDock="right"
-        bottomOffset={Platform.OS === 'ios' ? 120 : 96}
+        bottomOffset={Platform.OS === 'ios' ? 130 : 110}
         snapToEdges={true}
         bubbleMode="reposition"
       />
@@ -1666,6 +2064,7 @@ export default function HomeScreen() {
   );
 }
 
+// Enhanced Professional Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1673,1088 +2072,1417 @@ const styles = StyleSheet.create({
   },
 
   // Enhanced Header Styles
-  header: {
-    backgroundColor: COLORS.background,
+  headerNew: {
+    backgroundColor: COLORS.surface,
     paddingHorizontal: SCREEN_PADDING,
-    paddingTop: Platform.OS === 'ios' ? 8 : 12,
-    paddingBottom: 16,
+    paddingTop: Platform.OS === 'ios' ? SPACING.md : SPACING.lg,
+    paddingBottom: SPACING.xl,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderBottomColor: COLORS.borderLight,
+    elevation: 4,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
   },
-  headerTop: {
+  headerTopNew: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xl,
   },
-  locationContainer: {
+  locationSection: {
+    flex: 1,
+    marginRight: SPACING.lg,
+  },
+  locationMainInfo: {
     flex: 1,
   },
-  locationButton: {
+  locationLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  locationAddressRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  locationText: {
-    fontSize: FONTS.base,
+  locationAddressText: {
+    fontSize: FONTS.lg,
     fontWeight: '700',
-    color: COLORS.text,
-    marginRight: 8,
+    color: COLORS.textPrimary,
+    flex: 1,
+    marginRight: SPACING.sm,
   },
-  dropdownIcon: {
-    fontSize: FONTS.sm,
+  locationDropdownIcon: {
+    fontSize: FONTS.base,
     color: COLORS.primary,
     fontWeight: 'bold',
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  profileButtonNew: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
-  profileButton: {},
-  profileIcon: {
-    width: isTablet ? 44 : 36,
-    height: isTablet ? 44 : 36,
-    borderRadius: isTablet ? 22 : 18,
-    backgroundColor: COLORS.surface,
+  profileButtonGradient: {
+    width: isTablet ? 48 : 40,
+    height: isTablet ? 48 : 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    elevation: 1,
-    shadowColor: COLORS.shadow,
+  },
+  profileIconNew: {
+    fontSize: FONTS.xl,
+  },
+  searchSection: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
-  profileIconText: {
-    fontSize: FONTS.lg,
-    color: COLORS.text,
-    fontWeight: '700',
-  },
-  searchContainer: {
+  searchGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: SCREEN_PADDING,
-    paddingVertical: isTablet ? 16 : 12,
-    borderRadius: BORDER_RADIUS.medium,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
-  searchIcon: {
-    fontSize: FONTS.base,
-    marginRight: 12,
+  searchIconNew: {
+    fontSize: FONTS.lg,
+    marginRight: SPACING.md,
     color: COLORS.textSecondary,
   },
-  searchPlaceholder: {
+  searchPlaceholderNew: {
     flex: 1,
-    fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
+    fontSize: FONTS.base,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  searchMicrophone: {
+    padding: SPACING.sm,
+  },
+  microphoneIcon: {
+    fontSize: FONTS.base,
+    color: COLORS.primary,
   },
 
-  // Content Styles
+  // Enhanced Content Styles
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: Platform.OS === 'ios' ? 140 : 120,
+    paddingBottom: Platform.OS === 'ios' ? 160 : 140,
   },
 
   // Enhanced Banner Styles
   carouselSection: {
-    marginVertical: isTablet ? 24 : 16,
+    marginVertical: SPACING.xl,
   },
-  bannerWrapper: {
-    width: width - (SCREEN_PADDING * 2),
-    paddingHorizontal: 4,
+  bannerContainer: {
+    width: width - (SCREEN_PADDING * 1.5),
+    paddingHorizontal: SPACING.xs,
   },
-  bannerCard: {
-    borderRadius: BORDER_RADIUS.large,
+  enhancedBannerCard: {
+    borderRadius: BORDER_RADIUS.xxl,
     overflow: 'hidden',
-    height: height * 0.22,
-    elevation: 3,
+    height: height * 0.24,
+    elevation: 6,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    position: 'relative',
   },
-  bannerContent: {
+  bannerPattern: {
+    position: 'absolute',
+    top: -10,
+    right: -20,
+    opacity: 0.15,
+    transform: [{ rotate: '15deg' }],
+  },
+  bannerPatternText: {
+    fontSize: 60,
+    letterSpacing: 10,
+  },
+  bannerContentSection: {
     flex: 1,
-    padding: isTablet ? 24 : 20,
+    padding: isTablet ? SPACING.xxxl : SPACING.xxl,
     justifyContent: 'center',
   },
-  bannerLeft: {
+  bannerMainContent: {
     flex: 1,
+    justifyContent: 'center',
   },
-  bannerEmoji: {
-    fontSize: isTablet ? 32 : 24,
-    marginBottom: isTablet ? 12 : 8,
+  bannerEmojiNew: {
+    fontSize: isTablet ? 40 : 32,
+    marginBottom: SPACING.md,
   },
-  bannerTitle: {
-    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
-    fontWeight: '800',
+  bannerTitleNew: {
+    fontSize: isTablet ? FONTS.huge : FONTS.xxxl,
+    fontWeight: '900',
     color: COLORS.textInverse,
-    marginBottom: 4,
-    letterSpacing: 0.2,
+    marginBottom: SPACING.xs,
+    letterSpacing: 0.5,
   },
-  bannerSubtitle: {
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: isTablet ? 16 : 12,
+  bannerSubtitleNew: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: 'rgba(255,255,255,0.95)',
+    marginBottom: SPACING.lg,
+    fontWeight: '500',
   },
-  bannerButton: {
+  bannerCallToAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: isTablet ? 20 : 16,
-    paddingVertical: isTablet ? 12 : 8,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
-  bannerButtonText: {
+  bannerButtonTextNew: {
     color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontSize: FONTS.sm,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    marginRight: SPACING.sm,
+  },
+  bannerArrow: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  bannerSkeletonContainer: {
+    marginVertical: SPACING.xl,
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: SPACING.lg,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 3,
+  dotNew: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.borderLight,
+    marginHorizontal: 4,
   },
-  activeDot: {
+  activeDotNew: {
     backgroundColor: COLORS.primary,
-    width: 16,
+    width: 24,
   },
 
   // Enhanced Section Styles
   section: {
-    marginBottom: isTablet ? 32 : 24,
+    marginBottom: SPACING.xxxl,
     paddingHorizontal: SCREEN_PADDING,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: isTablet ? 20 : 16,
+  enhancedSectionHeader: {
+    marginBottom: SPACING.xl,
   },
-  sectionTitle: {
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionIconContainer: {
+    width: isTablet ? 44 : 36,
+    height: isTablet ? 44 : 36,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  sectionEmoji: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+  },
+  sectionTextContainer: {
+    flex: 1,
+  },
+  sectionTitleNew: {
     fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
     fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 4,
-    letterSpacing: 0.2,
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+    letterSpacing: 0.3,
   },
-  sectionSubtitle: {
+  sectionSubtitleNew: {
     fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.textSecondary,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 
   // Enhanced Category Styles
-  categoriesContainer: {
-    paddingVertical: 8,
+  categoriesScrollContainer: {
+    paddingVertical: SPACING.md,
   },
-  categoryItem: {
+  categoryItemContainer: {
     alignItems: 'center',
-    marginRight: isTablet ? 32 : 24,
+    marginRight: isTablet ? SPACING.xxxl : SPACING.xxl,
   },
   categoryCard: {
     alignItems: 'center',
     position: 'relative',
   },
-  selectedCategoryCard: {
-    transform: [{ scale: 1.05 }],
-  },
-  categoryIcon: {
-    width: isTablet ? 70 : 64,
-    height: isTablet ? 70 : 64,
-    borderRadius: isTablet ? 35 : 32,
+  selectedCategoryCard: {},
+  categoryIconContainer: {
+    width: isTablet ? 80 : 70,
+    height: isTablet ? 80 : 70,
+    borderRadius: BORDER_RADIUS.xl,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.md,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    elevation: 3,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
-  selectedCategoryIcon: {
-    backgroundColor: COLORS.primaryLight,
+  selectedCategoryIconContainer: {
+    backgroundColor: COLORS.primaryUltraLight,
     borderColor: COLORS.primary,
+    borderWidth: 3,
   },
   categoryImage: {
-    width: isTablet ? 60 : 50,
-    height: isTablet ? 60 : 50,
-    borderRadius: isTablet ? 30 : 25,
+    width: isTablet ? 70 : 60,
+    height: isTablet ? 70 : 60,
+    borderRadius: BORDER_RADIUS.lg,
     resizeMode: 'cover',
   },
-  categoryName: {
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    color: COLORS.text,
-    fontWeight: '700',
-    textAlign: 'center',
-    maxWidth: isTablet ? 80 : 64,
-  },
-  selectedCategoryName: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  categoryIndicator: {
-    position: 'absolute',
-    bottom: -8,
-    width: 24,
-    height: 3,
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
-  },
-
-  // Enhanced Recommended Card Styles
-  recommendedContainer: {
-    paddingVertical: 8,
-  },
-  recommendedRow: {
-    justifyContent: 'space-between',
-  },
-  recommendedCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.large,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: CARD_SPACING,
-  },
-  recommendedImageContainer: {
-    position: 'relative',
-    height: 120,
-  },
-  recommendedImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  imageGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '55%',
-  },
-  recommendedOfferBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: COLORS.accent,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  recommendedRatingBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  deliveryTime: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  deliveryTimeText: {
-    fontSize: FONTS.xs,
-    fontWeight: '700',
-    color: COLORS.textInverse,
-  },
-  recommendedInfo: {
-    padding: isTablet ? 16 : 12,
-  },
-  recommendedName: {
-    fontSize: FONTS.sm,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  cuisineType: {
-    fontSize: FONTS.xs,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-  },
-  recommendedFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  priceText: {
-    fontSize: FONTS.sm,
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  originalPriceText: {
-    fontSize: FONTS.xs,
-    color: COLORS.textSecondary,
-    textDecorationLine: 'line-through',
-    marginLeft: 4,
-  },
-
-  // Enhanced Top Section Card Styles
-  topSectionContainer: {
-    paddingVertical: 8,
-  },
-  topSectionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.large,
-    marginRight: CARD_SPACING,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  topSectionImageContainer: {
-    position: 'relative',
-    height: 140,
-  },
-  topSectionImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  offerBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: COLORS.accent,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  offerText: {
-    color: COLORS.textInverse,
-    fontSize: FONTS.xs,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  ratingText: {
-    color: COLORS.textInverse,
-    fontSize: FONTS.xs,
-    fontWeight: '700',
-  },
-  topSectionInfo: {
-    padding: isTablet ? 16 : 12,
-  },
-  topSectionName: {
-    fontSize: FONTS.base,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  deliveryInfo: {
-    flex: 1,
-  },
-  deliveryText: {
-    fontSize: FONTS.xs,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  deliveryPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  // Enhanced Full Card Styles
-  fullCardContainer: {
-    paddingVertical: 8,
-  },
-  fullCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.large,
-    marginBottom: CARD_SPACING,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  fullCardImageContainer: {
-    position: 'relative',
-  },
-  fullCardImage: {
-    resizeMode: 'cover',
-  },
-  fullCardOfferBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    backgroundColor: COLORS.accent,
-    borderRadius: 5,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  fullCardContent: {
-    flex: 1,
-    padding: isTablet ? 16 : 12,
-    justifyContent: 'space-between',
-  },
-  fullCardName: {
-    fontSize: FONTS.base,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  fullCardMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  fullCardLeft: {
-    flex: 1,
-  },
-  fullCardRating: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
-  },
-
-  // Enhanced Add Button Styles
-  addButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingVertical: isTablet ? 10 : 8,
-    paddingHorizontal: isTablet ? 16 : 14,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.15,
-    shadowRadius: 3,
-  },
-  addedButton: {
-    backgroundColor: COLORS.success,
-  },
-  addButtonText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  addedButtonText: {
-    color: COLORS.textInverse,
-  },
-
-  // No Sections Container
-  noSectionsContainer: {
-    padding: isTablet ? 60 : 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noSectionsText: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  // Bottom Tab Styles
-  bottomTabContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.background,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    elevation: 8,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-  bottomTabs: {
-    flexDirection: 'row',
-    paddingVertical: isTablet ? 12 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    position: 'relative',
-  },
-  tabIconContainer: {
-    marginBottom: 4,
-  },
-  activeTabIcon: {
-    transform: [{ scale: 1.12 }],
-  },
-  tabIcon: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-  },
-  tabLabel: {
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '700',
-  },
-  tabBadge: {
-    position: 'absolute',
-    top: 4,
-    right: width * 0.1,
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.background,
-  },
-  tabBadgeText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.xs - 1 : 9,
-    fontWeight: '800',
-  },
-
-  // Floating Cart Styles
-  floatingCartContainer: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 110 : 90,
-    left: SCREEN_PADDING,
-    right: SCREEN_PADDING,
-    zIndex: 1000,
-    elevation: 10,
-  },
-  floatingCart: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.large,
-    paddingVertical: isTablet ? 20 : 16,
-    paddingHorizontal: isTablet ? 24 : 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  cartLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cartItemsCount: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 8,
-    width: isTablet ? 36 : 32,
-    height: isTablet ? 36 : 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cartItemsCountText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '800',
-  },
-  cartInfo: {
-    flex: 1,
-  },
-  cartItemsText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  cartExtraText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '500',
-  },
-  cartRight: {
-    alignItems: 'flex-end',
-  },
-  cartTotal: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  cartViewText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  closeCartButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: COLORS.background,
-    borderRadius: 16,
-    width: isTablet ? 36 : 32,
-    height: isTablet ? 36 : 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  closeCartText: {
-    color: COLORS.primary,
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '800',
-  },
-
-  // Modal Styles
-  modalOverlay: {
+  categorySelectionOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-    zIndex: 2000,
-    elevation: 20,
+    backgroundColor: 'rgba(255,107,53,0.15)',
+    borderRadius: BORDER_RADIUS.lg,
   },
-
-  // Cart Modal Styles
-  cartModal: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: BORDER_RADIUS.xlarge,
-    borderTopRightRadius: BORDER_RADIUS.xlarge,
-    maxHeight: height * 0.8,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 0,
-  },
-  cartModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: isTablet ? 24 : 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  cartModalTitle: {
-    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  modalCloseButton: {
-    width: isTablet ? 36 : 32,
-    height: isTablet ? 36 : 32,
-    borderRadius: isTablet ? 18 : 16,
-    backgroundColor: COLORS.surfaceAlt,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalCloseText: {
-    color: COLORS.textSecondary,
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '800',
-  },
-  cartItemsList: {
-    maxHeight: height * 0.4,
-    paddingHorizontal: isTablet ? 24 : 20,
-  },
-  cartItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: isTablet ? 20 : 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  cartItemImageContainer: {
-    marginRight: isTablet ? 16 : 12,
-  },
-  cartItemImage: {
-    width: isTablet ? 70 : 60,
-    height: isTablet ? 70 : 60,
-    borderRadius: BORDER_RADIUS.medium,
-    resizeMode: 'cover',
-  },
-  cartItemInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  cartItemName: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  cartItemSpice: {
+  categoryName: {
     fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  cartItemPrice: {
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  quantityButton: {
-    width: isTablet ? 36 : 32,
-    height: isTablet ? 36 : 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  quantityButtonText: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    fontWeight: '800',
-    color: COLORS.primary,
-  },
-  quantityText: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textPrimary,
     fontWeight: '700',
-    color: COLORS.text,
-    marginHorizontal: isTablet ? 16 : 12,
-    minWidth: 24,
     textAlign: 'center',
+    maxWidth: isTablet ? 90 : 70,
   },
-  cartModalFooter: {
-    padding: isTablet ? 24 : 20,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-
-  // Coupon Section Styles
-  couponSection: {
-    marginBottom: isTablet ? 24 : 20,
-  },
-  couponButton: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingVertical: isTablet ? 16 : 12,
-    paddingHorizontal: isTablet ? 20 : 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  couponButtonText: {
+  selectedCategoryName: {
     color: COLORS.primary,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  couponInputContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
+  categoryActiveIndicator: {
+    position: 'absolute',
+    bottom: -12,
+    left: '50%',
+    marginLeft: -16,
+    width: 32,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  couponInput: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: isTablet ? 16 : 12,
-    paddingVertical: isTablet ? 16 : 12,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  applyCouponButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: isTablet ? 20 : 16,
-    paddingVertical: isTablet ? 16 : 12,
-  },
-  applyCouponText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '700',
-  },
-  cancelCouponButton: {
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: isTablet ? 20 : 16,
-    paddingVertical: isTablet ? 16 : 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cancelCouponText: {
-    color: COLORS.textSecondary,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '700',
-  },
-  appliedCouponContainer: {
-    backgroundColor: COLORS.success + '20',
-    borderRadius: BORDER_RADIUS.medium,
-    paddingHorizontal: isTablet ? 20 : 16,
-    paddingVertical: isTablet ? 16 : 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.success,
-  },
-  appliedCouponText: {
-    color: COLORS.success,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '600',
+  categoryIndicatorGradient: {
     flex: 1,
   },
-  removeCouponText: {
-    color: COLORS.error,
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    fontWeight: '700',
+  categorySkeletonItem: {
+    alignItems: 'center',
+    marginRight: isTablet ? SPACING.xxxl : SPACING.xxl,
   },
 
-  // Cart Summary Styles
-  cartSummary: {
-    marginBottom: isTablet ? 24 : 20,
+  // Enhanced Recommended Card Styles
+  recommendedGridContainer: {
+    paddingVertical: SPACING.md,
   },
-  summaryRow: {
-    flexDirection: 'row',
+  recommendedGridRow: {
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
   },
-  summaryRowTotal: {
+  recommendedSkeletonGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginTop: 8,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
-  summaryLabel: {
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  summaryValue: {
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  summaryLabelTotal: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  summaryValueTotal: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    fontWeight: '900',
-    color: COLORS.primary,
-  },
-  cartModalActions: {
-    flexDirection: 'row',
-    gap: isTablet ? 16 : 12,
-  },
-  clearCartButton: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingVertical: isTablet ? 18 : 14,
-    alignItems: 'center',
+  recommendedCardNew: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
+    marginBottom: CARD_SPACING,
   },
-  clearCartText: {
-    color: COLORS.textSecondary,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '800',
-  },
-  checkoutButton: {
-    flex: 2,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingVertical: isTablet ? 18 : 14,
-    alignItems: 'center',
-  },
-  checkoutButtonText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '900',
-    letterSpacing: 0.3,
-  },
-
-  // Product Modal Styles
-  productModalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  productModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SCREEN_PADDING,
-    paddingVertical: isTablet ? 16 : 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalBackButton: {
-    width: isTablet ? 44 : 40,
-    height: isTablet ? 44 : 40,
-    borderRadius: isTablet ? 22 : 20,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalBackText: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    color: COLORS.text,
-    fontWeight: '800',
-  },
-  productModalTitle: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  modalPlaceholder: {
-    width: isTablet ? 44 : 40,
-  },
-  productModalContent: {
-    flex: 1,
-  },
-  productImageContainer: {
+  recommendedImageSection: {
     position: 'relative',
-    height: height * 0.3,
+    height: 130,
   },
-  productModalImage: {
+  recommendedImageNew: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  imageOverlay: {
+  recommendedImageGradient: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '30%',
+    height: '50%',
   },
-  productOfferBadge: {
+  discountBadge: {
     position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: COLORS.accent,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    top: SPACING.md,
+    left: SPACING.md,
+    backgroundColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    elevation: 2,
   },
-  productRatingBadge: {
+  discountText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  ratingBadgeNew: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  productInfo: {
-    padding: isTablet ? 24 : 20,
-  },
-  productName: {
-    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
-    fontWeight: '900',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  productDescription: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    color: COLORS.textSecondary,
-    lineHeight: isTablet ? 28 : 24,
-    marginBottom: isTablet ? 24 : 20,
-  },
-  productMeta: {
+    top: SPACING.md,
+    right: SPACING.md,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: isTablet ? 28 : 24,
-    paddingVertical: isTablet ? 20 : 16,
-    backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.medium,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  metaItem: {
     alignItems: 'center',
   },
+  ratingTextNew: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+  },
+  deliveryTimeBadge: {
+    position: 'absolute',
+    bottom: SPACING.md,
+    left: SPACING.md,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  deliveryTimeBadgeText: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+  },
+  recommendedContentSection: {
+    padding: isTablet ? SPACING.lg : SPACING.md,
+  },
+  recommendedNameNew: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  recommendedCuisine: {
+    fontSize: FONTS.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+    fontWeight: '500',
+  },
+  recommendedFooterNew: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  priceTextNew: {
+    fontSize: FONTS.base,
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  originalPriceTextNew: {
+    fontSize: FONTS.xs,
+    color: COLORS.textMuted,
+    textDecorationLine: 'line-through',
+    marginLeft: SPACING.xs,
+  },
+  addButtonNew: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    minWidth: 60,
+  },
+  addedButtonNew: {
+    backgroundColor: COLORS.success,
+  },
+  addButtonTextNew: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  addedButtonTextNew: {
+    color: COLORS.textInverse,
+  },
+
+  // Enhanced Top Section Card Styles
+  topSectionScrollContainer: {
+    paddingVertical: SPACING.md,
+  },
+  topSectionSkeletonContainer: {
+    paddingVertical: SPACING.md,
+  },
+  topSectionCardNew: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: BORDER_RADIUS.xl,
+    marginRight: CARD_SPACING,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  topSectionImageSection: {
+    position: 'relative',
+    height: 150,
+  },
+  topSectionImageNew: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  topSectionImageGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '40%',
+  },
+  topDiscountBadge: {
+    position: 'absolute',
+    top: SPACING.md,
+    left: SPACING.md,
+    backgroundColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  topDiscountText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+  },
+  topRatingBadge: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: SPACING.md,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  topRatingText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+  },
+  topSectionContentNew: {
+    padding: isTablet ? SPACING.lg : SPACING.md,
+  },
+  topSectionNameNew: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  topSectionCuisine: {
+    fontSize: FONTS.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+    fontWeight: '500',
+  },
+  topSectionFooterNew: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  topDeliveryInfo: {
+    flex: 1,
+  },
+  topDeliveryText: {
+    fontSize: FONTS.xs,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+    fontWeight: '600',
+  },
+  topPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topPriceText: {
+    fontSize: FONTS.base,
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  topOriginalPrice: {
+    fontSize: FONTS.xs,
+    color: COLORS.textMuted,
+    textDecorationLine: 'line-through',
+    marginLeft: SPACING.xs,
+  },
+  topAddButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    elevation: 2,
+    minWidth: 60,
+  },
+  topAddedButton: {
+    backgroundColor: COLORS.success,
+  },
+  topAddButtonText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  topAddedButtonText: {
+    color: COLORS.textInverse,
+  },
+
+  // Enhanced Full Card Styles
+  fullCardSectionContainer: {
+    paddingVertical: SPACING.md,
+  },
+  fullCardSkeletonContainer: {
+    paddingVertical: SPACING.md,
+  },
+  fullCardNew: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: BORDER_RADIUS.xl,
+    marginBottom: CARD_SPACING,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    elevation: 4,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  fullCardImageSection: {
+    position: 'relative',
+  },
+  fullCardImageNew: {
+    resizeMode: 'cover',
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderBottomLeftRadius: BORDER_RADIUS.xl,
+  },
+  fullDiscountBadge: {
+    position: 'absolute',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    backgroundColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  fullDiscountText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+  },
+  fullCardContentNew: {
+    flex: 1,
+    padding: isTablet ? SPACING.lg : SPACING.md,
+    justifyContent: 'space-between',
+  },
+  fullCardMainInfo: {
+    flex: 1,
+  },
+  fullCardNameNew: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  fullCardCuisine: {
+    fontSize: FONTS.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+    fontWeight: '500',
+  },
+  fullCardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  fullRatingChip: {
+    backgroundColor: COLORS.successLight,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginRight: SPACING.md,
+  },
+  fullRatingText: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    color: COLORS.success,
+  },
+  fullDeliveryText: {
+    fontSize: FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  fullCardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fullPriceInfo: {
+    flex: 1,
+  },
+  fullPriceText: {
+    fontSize: FONTS.lg,
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  fullOriginalPrice: {
+    fontSize: FONTS.xs,
+    color: COLORS.textMuted,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
+  fullAddButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    elevation: 2,
+    minWidth: 60,
+  },
+  fullAddedButton: {
+    backgroundColor: COLORS.success,
+  },
+  fullAddButtonText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  fullAddedButtonText: {
+    color: COLORS.textInverse,
+  },
+
+  // No Content Styles
+  noContentContainer: {
+    padding: isTablet ? 80 : 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noContentEmoji: {
+    fontSize: 48,
+    marginBottom: SPACING.lg,
+  },
+  noContentTitle: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  noContentSubtitle: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // Enhanced Bottom Tab Styles
+  bottomTabsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  bottomTabsGradient: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  bottomTabsContent: {
+    flexDirection: 'row',
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    paddingBottom: Platform.OS === 'ios' ? 24 : SPACING.md,
+    paddingHorizontal: SPACING.sm,
+  },
+  tabButtonContainer: {
+    flex: 1,
+  },
+  tabButton: {
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    position: 'relative',
+  },
+  activeTabButton: {},
+  tabIconWrapper: {
+    marginBottom: SPACING.xs,
+    width: isTablet ? 32 : 28,
+    height: isTablet ? 32 : 28,
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeTabIconWrapper: {
+    transform: [{ scale: 1.1 }],
+  },
+  tabIcon: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+  },
+  tabLabel: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  tabNotificationBadge: {
+    position: 'absolute',
+    top: 2,
+    right: width * 0.08,
+    borderRadius: BORDER_RADIUS.sm,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  tabNotificationText: {
+    color: COLORS.textInverse,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+
+  // Enhanced Floating Cart Styles
+  floatingCartContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 120 : 100,
+    left: SCREEN_PADDING,
+    right: SCREEN_PADDING,
+    zIndex: 1000,
+    elevation: 15,
+  },
+  floatingCartCard: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  floatingCartGradient: {
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cartLeftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cartItemsIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: BORDER_RADIUS.md,
+    width: isTablet ? 40 : 36,
+    height: isTablet ? 40 : 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  cartItemsIndicatorText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '900',
+  },
+  cartMainInfo: {
+    flex: 1,
+  },
+  cartItemsMainText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  cartSubText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '500',
+  },
+  cartRightContent: {
+    alignItems: 'flex-end',
+  },
+  cartTotalAmount: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  viewCartButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
+  viewCartText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  cartDismissButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  cartDismissText: {
+    color: COLORS.textSecondary,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '800',
+  },
+
+  // Enhanced Cart Modal Styles
+  cartModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+    zIndex: 2000,
+    elevation: 25,
+  },
+  cartModalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    maxHeight: height * 0.85,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 0,
+  },
+  cartModalHeaderSection: {
+    paddingTop: SPACING.md,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: SPACING.lg,
+  },
+  cartModalHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cartModalHeaderTitle: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  cartModalCloseButton: {
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  cartModalCloseText: {
+    color: COLORS.textSecondary,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '800',
+  },
+  cartItemsScrollView: {
+    maxHeight: height * 0.35,
+  },
+  cartItemsContainer: {
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+  },
+  cartItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  cartItemImageSection: {
+    marginRight: isTablet ? SPACING.lg : SPACING.md,
+  },
+  cartItemImageStyle: {
+    width: isTablet ? 75 : 70,
+    height: isTablet ? 75 : 70,
+    borderRadius: BORDER_RADIUS.lg,
+    resizeMode: 'cover',
+  },
+  cartItemDetails: {
+    flex: 1,
+    marginRight: SPACING.md,
+  },
+  cartItemTitle: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  spiceLevelChip: {
+    backgroundColor: COLORS.errorLight,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.xs,
+  },
+  spiceLevelText: {
+    fontSize: FONTS.xs,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  cartItemPriceText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  cartQuantitySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  cartQuantityButton: {
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  cartQuantityButtonText: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  cartQuantityDisplay: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: isTablet ? SPACING.md : SPACING.sm,
+    paddingVertical: SPACING.sm,
+    marginHorizontal: SPACING.xs,
+    minWidth: 32,
+    alignItems: 'center',
+  },
+  cartQuantityDisplayText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  cartModalFooterSection: {
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingTop: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+
+  // Enhanced Coupon Section Styles
+  couponSectionCard: {
+    marginBottom: SPACING.xl,
+  },
+  couponApplyButton: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  couponApplyIcon: {
+    fontSize: FONTS.lg,
+    marginRight: SPACING.md,
+  },
+  couponApplyText: {
+    color: COLORS.primary,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    flex: 1,
+  },
+  couponApplyArrow: {
+    color: COLORS.primary,
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  couponInputSection: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    alignItems: 'center',
+  },
+  couponInputField: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.lg : SPACING.md,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  couponSubmitButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    elevation: 2,
+  },
+  couponSubmitText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '800',
+  },
+  appliedCouponCard: {
+    backgroundColor: COLORS.successLight,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.success,
+  },
+  appliedCouponInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  appliedCouponIcon: {
+    fontSize: FONTS.lg,
+    marginRight: SPACING.md,
+  },
+  appliedCouponDetails: {
+    flex: 1,
+  },
+  appliedCouponTitle: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.success,
+    marginBottom: 2,
+  },
+  appliedCouponCode: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  removeCouponButton: {
+    backgroundColor: COLORS.errorLight,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  removeCouponButtonText: {
+    color: COLORS.error,
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+  },
+
+  // Enhanced Bill Summary Styles
+  billSummaryCard: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: isTablet ? SPACING.xl : SPACING.lg,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  billSummaryTitle: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
+  },
+  billRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+  },
+  billLabel: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  billValue: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '700',
+  },
+  billDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.md,
+  },
+  billTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+  },
+  billTotalLabel: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  billTotalValue: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '900',
+    color: COLORS.primary,
+  },
+
+  // Enhanced Action Buttons
+  cartActionButtons: {
+    flexDirection: 'row',
+    gap: isTablet ? SPACING.lg : SPACING.md,
+  },
+  clearCartActionButton: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.border,
+  },
+  clearCartActionText: {
+    color: COLORS.textSecondary,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '800',
+  },
+  checkoutActionButton: {
+    flex: 2,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  checkoutDisabled: {
+    opacity: 0.6,
+  },
+  checkoutButtonGradient: {
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    alignItems: 'center',
+  },
+  checkoutActionText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
+  // Enhanced Product Modal Styles
+  productModalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  productHeroSection: {
+    height: height * 0.4,
+    position: 'relative',
+  },
+  productHeroImage: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  heroGradient: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: SCREEN_PADDING,
+    paddingVertical: Platform.OS === 'ios' ? SPACING.xxxl : SPACING.xl,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroBackButton: {
+    width: isTablet ? 48 : 44,
+    height: isTablet ? 48 : 44,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+  heroBackIcon: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    color: COLORS.textPrimary,
+    fontWeight: '800',
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  heroOfferBadge: {
+    backgroundColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  heroOfferText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.sm,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  heroRatingContainer: {},
+  heroRating: {
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  heroRatingText: {
+    color: COLORS.textInverse,
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+  },
+  productScrollContent: {
+    flex: 1,
+  },
+  productInfoCard: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    marginTop: -SPACING.xl,
+    paddingTop: SPACING.xl,
+    paddingHorizontal: isTablet ? SPACING.xxxl : SPACING.xl,
+    paddingBottom: SPACING.xl,
+    minHeight: height * 0.6,
+  },
+  productTitleSection: {
+    marginBottom: SPACING.xxl,
+  },
+  productModalName: {
+    fontSize: isTablet ? FONTS.huge : FONTS.xxxl,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    letterSpacing: 0.3,
+  },
+  productModalDescription: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textSecondary,
+    lineHeight: isTablet ? 32 : 26,
+    fontWeight: '500',
+  },
+  productMetaGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: SPACING.xxl,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingVertical: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  metaCardItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
   metaIconContainer: {
-    width: isTablet ? 48 : 40,
-    height: isTablet ? 48 : 40,
-    borderRadius: isTablet ? 24 : 20,
+    width: isTablet ? 52 : 44,
+    height: isTablet ? 52 : 44,
+    borderRadius: BORDER_RADIUS.xl,
     backgroundColor: COLORS.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.md,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   metaIcon: {
     fontSize: isTablet ? FONTS.xl : FONTS.lg,
@@ -2764,131 +3492,200 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '600',
     marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  metaText: {
+  metaValue: {
     fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontWeight: '700',
   },
-  ingredientsSection: {
-    marginBottom: isTablet ? 28 : 24,
+  ingredientsCard: {
+    marginBottom: SPACING.xxl,
   },
-  sectionTitle: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
+  cardSectionTitle: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
     fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: isTablet ? 16 : 12,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
   },
   ingredientsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: SPACING.md,
   },
-  ingredientTag: {
+  ingredientChip: {
     backgroundColor: COLORS.surfaceAlt,
-    borderRadius: BORDER_RADIUS.large,
-    paddingHorizontal: isTablet ? 16 : 12,
-    paddingVertical: isTablet ? 8 : 6,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingHorizontal: isTablet ? SPACING.lg : SPACING.md,
+    paddingVertical: isTablet ? SPACING.md : SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   ingredientText: {
     fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    color: COLORS.text,
-    fontWeight: '700',
+    color: COLORS.textPrimary,
+    fontWeight: '600',
   },
-  quantitySection: {
-    marginBottom: isTablet ? 24 : 20,
+  quantityCard: {
+    marginBottom: SPACING.xl,
   },
-  quantityValue: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    fontWeight: '900',
-    color: COLORS.text,
-    marginHorizontal: isTablet ? 24 : 20,
-    minWidth: 30,
-    textAlign: 'center',
-  },
-  productModalFooter: {
+  quantitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: isTablet ? 24 : 20,
-    paddingVertical: isTablet ? 20 : 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: BORDER_RADIUS.xl,
+    paddingHorizontal: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
-  priceSection: {
-    marginRight: 16,
+  quantityActionButton: {
+    width: isTablet ? 48 : 44,
+    height: isTablet ? 48 : 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.surface,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  totalPrice: {
+  quantityActionText: {
     fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  quantityDisplay: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    marginHorizontal: SPACING.lg,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  quantityDisplayText: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '900',
+    color: COLORS.textInverse,
+  },
+  productModalFooter: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+    elevation: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  footerGradient: {
+    paddingHorizontal: isTablet ? SPACING.xxxl : SPACING.xl,
+    paddingVertical: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingBottom: Platform.OS === 'ios' ? SPACING.xxxl : SPACING.xl,
+  },
+  priceDisplaySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.lg,
+  },
+  priceInfo: {
+    flex: 1,
+  },
+  totalPriceLabel: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  totalPriceValue: {
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
     fontWeight: '900',
     color: COLORS.primary,
   },
-  originalPrice: {
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    color: COLORS.textSecondary,
+  originalPriceValue: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textMuted,
     textDecorationLine: 'line-through',
-    marginTop: 2,
+    marginLeft: SPACING.md,
+    fontWeight: '600',
   },
-  priceNote: {
-    fontSize: isTablet ? FONTS.sm : FONTS.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  addToCartButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.medium,
-    paddingVertical: isTablet ? 16 : 12,
-    paddingHorizontal: isTablet ? 24 : 20,
-    flex: 1,
-    alignItems: 'center',
-  },
-  addToCartButtonText: {
-    color: COLORS.textInverse,
-    fontSize: isTablet ? FONTS.base : FONTS.sm,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-
-  // Address Modal Styles
-  addressModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-start',
-    paddingTop: 80,
-  },
-  addressDropdown: {
-    backgroundColor: COLORS.background,
-    marginHorizontal: SCREEN_PADDING,
-    borderRadius: BORDER_RADIUS.medium,
-    maxHeight: height * 0.6,
-    elevation: 8,
+  addToCartMainButton: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 6,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    flex: 2,
+  },
+  addingButton: {
+    opacity: 0.6,
+  },
+  buttonGradient: {
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    alignItems: 'center',
+  },
+  addToCartMainText: {
+    color: COLORS.textInverse,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
+  // Enhanced Address Modal Styles
+  addressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'ios' ? 100 : 80,
+  },
+  addressDropdown: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SCREEN_PADDING,
+    borderRadius: BORDER_RADIUS.xl,
+    maxHeight: height * 0.65,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    overflow: 'hidden',
   },
   addressDropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: isTablet ? 20 : 16,
+    padding: isTablet ? SPACING.xxl : SPACING.xl,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.borderLight,
+    backgroundColor: COLORS.surfaceAlt,
   },
   addressDropdownTitle: {
-    fontSize: isTablet ? FONTS.xl : FONTS.lg,
-    fontWeight: '700',
-    color: COLORS.text,
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
   },
   addressCloseButton: {
-    width: isTablet ? 32 : 30,
-    height: isTablet ? 32 : 30,
-    borderRadius: isTablet ? 16 : 15,
-    backgroundColor: COLORS.surfaceAlt,
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   addressCloseText: {
     fontSize: isTablet ? FONTS.lg : FONTS.base,
@@ -2896,15 +3693,16 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   addressList: {
-    maxHeight: height * 0.4,
+    maxHeight: height * 0.45,
   },
   addressItem: {
-    padding: isTablet ? 20 : 16,
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.borderLight,
   },
   selectedAddressItem: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.primaryUltraLight,
   },
   addressItemContent: {
     flex: 1,
@@ -2913,30 +3711,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.md,
+  },
+  addressTypeChip: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
   },
   addressType: {
     fontSize: isTablet ? FONTS.sm : FONTS.xs,
     fontWeight: '700',
     color: COLORS.primary,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   selectedIndicator: {
-    fontSize: isTablet ? FONTS.lg : FONTS.base,
-    color: COLORS.primary,
-    fontWeight: '700',
+    width: isTablet ? 28 : 24,
+    height: isTablet ? 28 : 24,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedIndicatorText: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textInverse,
+    fontWeight: '800',
   },
   addressFullText: {
     fontSize: isTablet ? FONTS.lg : FONTS.base,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
-    lineHeight: isTablet ? 26 : 22,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+    lineHeight: isTablet ? 28 : 24,
   },
   addressArea: {
     fontSize: isTablet ? FONTS.base : FONTS.sm,
     color: COLORS.textSecondary,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 });
-

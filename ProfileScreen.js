@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,15 +13,113 @@ import {
   Linking,
   TextInput,
   SafeAreaView,
+  Animated,
+  Easing,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
+const isTablet = width > 768;
 const baseURL = 'http://212.38.94.189:8000';
 
-// City and area data - same as UserDetailsScreen
+// Professional spacing system (matching HomeScreen)
+const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+const SCREEN_PADDING = width * 0.04;
+
+// Enhanced border radius system
+const BORDER_RADIUS = {
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 20,
+  xxxl: 24,
+};
+
+// Professional typography scale
+const FONT_SCALE = Math.min(width / 375, 1.3);
+const FONTS = {
+  xs: 11 * FONT_SCALE,
+  sm: 13 * FONT_SCALE,
+  base: 15 * FONT_SCALE,
+  lg: 17 * FONT_SCALE,
+  xl: 19 * FONT_SCALE,
+  xxl: 22 * FONT_SCALE,
+  xxxl: 26 * FONT_SCALE,
+  huge: 32 * FONT_SCALE,
+};
+
+// Professional color palette (matching HomeScreen)
+const COLORS = {
+  // Primary brand colors with depth
+  primary: '#FF6B35',
+  primaryDark: '#E8541C',
+  primaryLight: '#FFE8E0',
+  primaryUltraLight: '#FFF5F2',
+  
+  // Enhanced secondary colors
+  secondary: '#4A90E2',
+  accent: '#F7B731',
+  accentLight: '#FEF3CD',
+  
+  // Sophisticated neutrals
+  background: '#FAFBFC',
+  surface: '#FFFFFF',
+  surfaceElevated: '#FFFFFF',
+  surfaceAlt: '#F8F9FA',
+  surfaceCard: '#FFFFFF',
+  
+  // Typography hierarchy
+  text: '#1A1D29',
+  textPrimary: '#2C2F36',
+  textSecondary: '#6C7278',
+  textMuted: '#9CA3AF',
+  textDisabled: '#D1D5DB',
+  textInverse: '#FFFFFF',
+  
+  // Status colors
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  error: '#EF4444',
+  errorLight: '#FEE2E2',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  
+  // Enhanced borders and dividers
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
+  divider: '#F1F3F4',
+  
+  // Professional shadows
+  shadow: 'rgba(17, 25, 40, 0.12)',
+  shadowDark: 'rgba(17, 25, 40, 0.25)',
+  shadowLight: 'rgba(17, 25, 40, 0.06)',
+  
+  // Glass morphism
+  glass: 'rgba(255, 255, 255, 0.85)',
+  glassBlur: 'rgba(255, 255, 255, 0.2)',
+  
+  // Additional colors
+  purple: '#9C27B0',
+  teal: '#009688',
+  indigo: '#3F51B5',
+};
+
 const cityAreaData = {
   jalandhar: {
     name: 'Jalandhar',
@@ -49,33 +147,83 @@ const cityAreaData = {
   },
 };
 
+// Enhanced Pulse Animation Component
+const Pulse = ({ style, children }) => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 1200,
+          easing: Easing.bezier(0.4, 0, 0.6, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  return (
+    <Animated.View style={[{ opacity: pulseAnim }, style]}>
+      {children || <View style={[{ backgroundColor: COLORS.borderLight, borderRadius: 8 }, style]} />}
+    </Animated.View>
+  );
+};
+
+// Professional skeleton components
+const SkeletonLine = ({ height = 14, width = '100%', borderRadius = 6, style }) => (
+  <Pulse style={[{ height, width, borderRadius }, style]} />
+);
+
+const SkeletonCircle = ({ size = 48, style }) => (
+  <Pulse style={[{ width: size, height: size, borderRadius: size / 2 }, style]} />
+);
+
+const ProfileSkeleton = () => (
+  <View style={styles.profileCard}>
+    <View style={styles.skeletonProfile}>
+      <SkeletonCircle size={isTablet ? 80 : 70} style={{ marginRight: SPACING.lg }} />
+      <View style={{ flex: 1 }}>
+        <SkeletonLine height={FONTS.xl} width="70%" style={{ marginBottom: SPACING.sm }} />
+        <SkeletonLine height={FONTS.sm} width="50%" style={{ marginBottom: SPACING.xs }} />
+        <SkeletonLine height={FONTS.sm} width="60%" />
+      </View>
+    </View>
+  </View>
+);
+
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  
-  // User data state
-  const [userData, setUserData] = useState({
-    name: 'Loading...',
-    email: 'Loading...',
-    phone: 'Loading...',
-    id: null
-  });
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  const [userData, setUserData] = useState({ name: '', email: '', phone: '', id: null });
   const [loading, setLoading] = useState(true);
-  
+
   // Modal states
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addressModalVisible, setAddressModalVisible] = useState(false);
-  
-  // Edit form states
+  const [addAddressModalVisible, setAddAddressModalVisible] = useState(false);
+
+  // Edit profile states
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-  
-  // Address management states
+
+  // Address states
   const [addresses, setAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
-  
-  // New address form states
   const [newAddress, setNewAddress] = useState('');
   const [newAddressType, setNewAddressType] = useState('Home');
   const [selectedCity, setSelectedCity] = useState('');
@@ -84,418 +232,198 @@ export default function ProfileScreen() {
   const [showAreaModal, setShowAreaModal] = useState(false);
   const [addingAddress, setAddingAddress] = useState(false);
 
-  // VALIDATION FUNCTIONS
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.back(1.2)),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.out(Easing.back(1.1)),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading]);
+
+  // Validation functions
   const validateName = (name) => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return 'Name cannot be empty';
-    }
-    if (trimmedName.length < 2) {
-      return 'Name must be at least 2 characters long';
-    }
-    if (trimmedName.length > 50) {
-      return 'Name cannot be longer than 50 characters';
-    }
-    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
-      return 'Name can only contain letters and spaces';
-    }
+    const trimmed = name.trim();
+    if (!trimmed) return 'Name is required';
+    if (trimmed.length < 2) return 'Name must be at least 2 characters';
+    if (trimmed.length > 50) return 'Name is too long';
     return null;
   };
 
   const validatePhone = (phone) => {
-    const trimmedPhone = phone.trim();
-    if (!trimmedPhone) {
-      return 'Phone number cannot be empty';
-    }
-    
-    // Remove any non-digit characters for validation
-    const cleanPhone = trimmedPhone.replace(/\D/g, '');
-    
-    if (cleanPhone.length < 10) {
-      return 'Phone number must be at least 10 digits';
-    }
-    if (cleanPhone.length > 15) {
-      return 'Phone number cannot be longer than 15 digits';
-    }
-    
-    // Check if it's a valid Indian phone number format
-    const indianPhoneRegex = /^(\+91|91|0)?[6-9]\d{9}$/;
-    if (!indianPhoneRegex.test(cleanPhone)) {
-      return 'Please enter a valid Indian phone number';
-    }
-    
+    const clean = phone.trim().replace(/\D/g, '');
+    if (!clean) return 'Phone number is required';
+    if (clean.length < 10) return 'Please enter a valid phone number';
     return null;
   };
 
   const validateAddress = (address) => {
-    const trimmedAddress = address.trim();
-    if (!trimmedAddress) {
-      return 'Address cannot be empty';
-    }
-    if (trimmedAddress.length < 10) {
-      return 'Please enter a detailed address (minimum 10 characters)';
-    }
-    if (trimmedAddress.length > 200) {
-      return 'Address is too long (maximum 200 characters)';
-    }
+    const trimmed = address.trim();
+    if (!trimmed) return 'Address is required';
+    if (trimmed.length < 10) return 'Please enter a detailed address';
     return null;
   };
 
-  // ENHANCED REFRESH DATA FUNCTION with loading state
-  const refreshAllData = async (showLoading = false) => {
-    console.log('Refreshing all data...');
-    try {
-      if (showLoading) {
-        setLoading(true);
-      }
-      
-      // Refresh both user data and addresses
-      await Promise.all([
-        fetchUserData(),
-        fetchAddresses()
-      ]);
-      
-      console.log('All data refreshed successfully');
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      Alert.alert('Error', 'Failed to refresh data. Please try again.');
-    } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Add useEffect to refresh data when modal opens
   useEffect(() => {
-    if (addressModalVisible) {
-      console.log('Address modal opened, refreshing addresses...');
-      fetchAddresses();
-    }
-  }, [addressModalVisible]);
-
-  useEffect(() => {
-    console.log('ProfileScreen mounted, starting data fetch...');
     fetchUserData();
     fetchAddresses();
   }, []);
 
   const fetchUserData = async () => {
     try {
-      console.log('Starting fetchUserData...');
-      
       const email = await AsyncStorage.getItem('@user_email');
-      console.log('Retrieved email from storage:', email);
-      
       if (!email) {
-        console.log('No email found, navigating to login');
-        Alert.alert('Error', 'No user email found');
         navigation.replace('Login');
         return;
       }
+      setUserData((p) => ({ ...p, email }));
 
-      setUserData(prev => ({ ...prev, email: email }));
-
-      console.log('Making API call to fetch user data...');
       const response = await fetch(`${baseURL}/api/get-user`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-        }),
-      });
-
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('API Response:', result);
-
-      if (result.status === 'success' && result.data) {
-        console.log('Setting user data:', result.data);
-        
-        const cleanedData = {
-          id: result.data.id,
-          name: result.data.name || 'User',
-          email: result.data.email || email,
-          phone: result.data.phone || '+91 0000000000',
-          token: result.data.token,
-          created_at: result.data.created_at || result.data['created_at'],
-          updated_at: result.data.updated_at || result.data['updated_at']
-        };
-        
-        console.log('Setting cleaned user data:', cleanedData);
-        
-        setUserData(cleanedData);
-        setEditName(cleanedData.name);
-        setEditPhone(cleanedData.phone);
-        
-        await AsyncStorage.setItem('@user_data', JSON.stringify(cleanedData));
-        console.log('User data stored in AsyncStorage successfully');
-        
-      } else {
-        console.log('API returned error status:', result);
-        throw new Error(result.message || 'Failed to fetch user data');
-      }
-    } catch (error) {
-      console.error('API Error:', error);
-      
-      // Try to load cached data as fallback
-      try {
-        console.log('Attempting to load cached data...');
-        const cachedData = await AsyncStorage.getItem('@user_data');
-        if (cachedData) {
-          const parsed = JSON.parse(cachedData);
-          console.log('Loaded cached data:', parsed);
-          setUserData(parsed);
-          setEditName(parsed.name || '');
-          setEditPhone(parsed.phone || '');
-          Alert.alert('Info', 'Loaded cached profile data. Some information may be outdated.');
-        } else {
-          console.log('No cached data, setting default data');
-          const email = await AsyncStorage.getItem('@user_email');
-          const defaultData = {
-            name: 'User',
-            email: email || 'user@email.com',
-            phone: '+91 9876543210',
-            id: 1
-          };
-          setUserData(defaultData);
-          setEditName(defaultData.name);
-          setEditPhone(defaultData.phone);
-          Alert.alert('Error', 'Network error. Using default profile data.');
-        }
-      } catch (cacheError) {
-        console.error('Cache error:', cacheError);
-        const finalFallback = {
-          name: 'User',
-          email: 'user@email.com',
-          phone: '+91 9876543210',
-          id: 1
-        };
-        setUserData(finalFallback);
-        setEditName(finalFallback.name);
-        setEditPhone(finalFallback.phone);
-      }
-    } finally {
-      console.log('Setting loading to false');
-      setLoading(false);
-    }
-  };
-
-  // IMPROVED fetchAddresses with better state management
-  const fetchAddresses = async () => {
-    try {
-      setLoadingAddresses(true);
-      const email = await AsyncStorage.getItem('@user_email');
-      
-      if (!email) {
-        console.log('No email found for fetching addresses');
-        setAddresses([]); // Clear addresses if no email
-        return;
-      }
-
-      console.log('Fetching addresses for user:', email);
-      
-      const response = await fetch(`${baseURL}/api/address`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Addresses API response:', result);
-        
-        if (result.status === true && result.data && Array.isArray(result.data)) {
-          console.log('Setting addresses:', result.data);
-          setAddresses(result.data);
-        } else {
-          console.log('No addresses found or invalid data format');
-          setAddresses([]); // Ensure empty array instead of keeping old data
+        if (result.status === 'success' && result.data) {
+          const cleanedData = {
+            id: result.data.id,
+            name: result.data.name || 'User',
+            email: result.data.email || email,
+            phone: result.data.phone || '+91 0000000000',
+          };
+          setUserData(cleanedData);
+          setEditName(cleanedData.name);
+          setEditPhone(cleanedData.phone);
+          await AsyncStorage.setItem('@user_data', JSON.stringify(cleanedData));
         }
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to fetch addresses:', response.status, errorText);
-        setAddresses([]); // Clear addresses on error
       }
     } catch (error) {
-      console.error('Error fetching addresses:', error);
-      setAddresses([]); // Clear addresses on error
+      const email = await AsyncStorage.getItem('@user_email');
+      const fallback = { name: 'User', email: email || 'user@email.com', phone: '+91 9876543210', id: 1 };
+      setUserData(fallback);
+      setEditName(fallback.name);
+      setEditPhone(fallback.phone);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      setLoadingAddresses(true);
+      const email = await AsyncStorage.getItem('@user_email');
+      if (!email) return;
+
+      const response = await fetch(`${baseURL}/api/address`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === true && Array.isArray(result.data)) {
+          setAddresses(result.data);
+        }
+      }
+    } catch {
+      setAddresses([]);
     } finally {
       setLoadingAddresses(false);
     }
   };
 
-  // FIXED Add new address with better refresh handling and proper success message
   const handleAddAddress = async () => {
-    // COMPREHENSIVE VALIDATION
     const addressValidation = validateAddress(newAddress);
-    if (addressValidation) {
-      Alert.alert('Invalid Address', addressValidation);
-      return;
-    }
-
-    if (!selectedCity) {
-      Alert.alert('Missing City', 'Please select a city');
-      return;
-    }
-
-    if (!selectedArea) {
-      Alert.alert('Missing Area', 'Please select an area');
-      return;
-    }
-
-    if (!newAddressType) {
-      Alert.alert('Missing Type', 'Please select an address type');
-      return;
-    }
+    if (addressValidation) return Alert.alert('Error', addressValidation);
+    if (!selectedCity) return Alert.alert('Error', 'Please select a city');
+    if (!selectedArea) return Alert.alert('Error', 'Please select an area');
 
     try {
       setAddingAddress(true);
       const email = await AsyncStorage.getItem('@user_email');
-      
-      if (!email) {
-        Alert.alert('Error', 'No user email found');
-        return;
-      }
+      if (!email) return;
 
+      const areaName = getSelectedAreaName();
       const addressData = {
-        email: email,
+        email,
         type: newAddressType,
         city: cityAreaData[selectedCity].name,
-        area: getSelectedAreaName(),
+        area: areaName,
         full_address: newAddress.trim(),
       };
 
-      console.log('Adding address:', addressData);
-
       const response = await fetch(`${baseURL}/api/add-address`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(addressData),
       });
 
       const result = await response.json();
-      console.log('Add address response:', result);
-
       if (response.ok && (result.status === 'success' || result.status === true)) {
-        // Reset form FIRST
         setNewAddress('');
         setNewAddressType('Home');
         setSelectedCity('');
         setSelectedArea('');
-        
-        // Show success message
-        Alert.alert('Success', 'Address added successfully!', [
-          {
-            text: 'OK',
-            onPress: async () => {
-              // Force refresh addresses after user acknowledges success
-              console.log('Address added successfully, refreshing addresses...');
-              await fetchAddresses();
-            }
-          }
-        ]);
-        
-        // Also refresh immediately for real-time update
-        setTimeout(async () => {
-          await fetchAddresses();
-        }, 100);
-        
-      } else {
-        console.error('Failed to add address:', result);
-        Alert.alert('Error', result.message || 'Failed to add address. Please try again.');
+        setAddAddressModalVisible(false);
+        Alert.alert('Success', 'Address added successfully!');
+        fetchAddresses();
       }
-    } catch (error) {
-      console.error('Error adding address:', error);
-      Alert.alert('Error', 'Network error. Please check your connection and try again.');
+    } catch {
+      Alert.alert('Error', 'Failed to add address. Please try again.');
     } finally {
       setAddingAddress(false);
     }
   };
 
-  // IMPROVED Remove address with better refresh handling
   const handleRemoveAddress = (addressId) => {
-    Alert.alert(
-      'Remove Address',
-      'Are you sure you want to remove this address?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const email = await AsyncStorage.getItem('@user_email');
-              
-              if (!email) {
-                Alert.alert('Error', 'No user email found');
-                return;
-              }
-
-              console.log('Removing address ID:', addressId);
-
-              const response = await fetch(`${baseURL}/api/removeaddress`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: email,
-                  address_id: addressId,
-                }),
-              });
-
-              const result = await response.json();
-              console.log('Remove address response:', result);
-
-              if (response.ok && (result.status === 'success' || result.status === true)) {
-                // Show success message and refresh
-                Alert.alert('Success', 'Address removed successfully!', [
-                  {
-                    text: 'OK',
-                    onPress: async () => {
-                      // Force immediate refresh of addresses
-                      console.log('Address removed successfully, refreshing addresses...');
-                      await fetchAddresses();
-                    }
-                  }
-                ]);
-                
-                // Also refresh immediately for real-time update
-                setTimeout(async () => {
-                  await fetchAddresses();
-                }, 100);
-                
-              } else {
-                Alert.alert('Error', result.message || 'Failed to remove address');
-              }
-            } catch (error) {
-              console.error('Error removing address:', error);
-              Alert.alert('Error', 'Network error. Please try again.');
+    Alert.alert('Remove Address', 'Are you sure you want to remove this address?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const email = await AsyncStorage.getItem('@user_email');
+            const response = await fetch(`${baseURL}/api/removeaddress`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, address_id: addressId }),
+            });
+            const result = await response.json();
+            if (response.ok && (result.status === 'success' || result.status === true)) {
+              Alert.alert('Success', 'Address removed successfully!');
+              fetchAddresses();
             }
-          },
+          } catch {
+            Alert.alert('Error', 'Failed to remove address. Please try again.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  // Helper functions for dropdowns
   const selectCity = (cityKey) => {
     setSelectedCity(cityKey);
-    setSelectedArea(''); // Reset area when city changes
+    setSelectedArea('');
     setShowCityModal(false);
   };
 
@@ -506,1312 +434,1591 @@ export default function ProfileScreen() {
 
   const getSelectedAreaName = () => {
     if (!selectedCity || !selectedArea) return '';
-    const area = cityAreaData[selectedCity]?.areas.find(a => a.id === selectedArea);
+    const area = cityAreaData[selectedCity]?.areas.find((a) => a.id === selectedArea);
     return area ? area.name : '';
   };
 
-  // Other existing functions
-  const handleBackToHome = () => {
-    navigation.replace('Home', { userDetails: userData });
-  };
-
-  const handleEditProfile = () => {
-    setEditModalVisible(true);
-  };
-
-  // IMPROVED handleSaveProfile with better refresh
   const handleSaveProfile = async () => {
-    // COMPREHENSIVE VALIDATION
     const nameValidation = validateName(editName);
-    if (nameValidation) {
-      Alert.alert('Invalid Name', nameValidation);
-      return;
-    }
-
+    if (nameValidation) return Alert.alert('Validation Error', nameValidation);
     const phoneValidation = validatePhone(editPhone);
-    if (phoneValidation) {
-      Alert.alert('Invalid Phone Number', phoneValidation);
-      return;
-    }
+    if (phoneValidation) return Alert.alert('Validation Error', phoneValidation);
 
     try {
       setSavingProfile(true);
-
-      // Format phone number consistently
-      const formattedPhone = editPhone.trim().startsWith('+91') 
-        ? editPhone.trim() 
+      const formattedPhone = editPhone.trim().startsWith('+91')
+        ? editPhone.trim()
         : `+91 ${editPhone.trim().replace(/^\+?91/, '')}`;
 
-      const updateData = {
-        id: userData.id,
-        name: editName.trim(),
-        email: userData.email, // Keep original email
-        phone: formattedPhone,
-      };
-
-      console.log('Updating user profile:', updateData);
-
+      const updateData = { id: userData.id, name: editName.trim(), email: userData.email, phone: formattedPhone };
       const response = await fetch(`${baseURL}/api/edit-user`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
 
       const result = await response.json();
-      console.log('Update profile response:', result);
-
       if (response.ok && result.status === 'success') {
-        // Close modal first
         setEditModalVisible(false);
-        
-        // Force immediate refresh of user data
-        console.log('Profile updated successfully, refreshing user data...');
-        await fetchUserData(); // Direct refresh of user data
-        
+        await fetchUserData();
         Alert.alert('Success', 'Profile updated successfully!');
       } else {
         Alert.alert('Error', result.message || 'Failed to update profile');
       }
-    } catch (error) {
-      console.error('Update profile error:', error);
+    } catch {
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setSavingProfile(false);
     }
   };
 
-  const handleContactSupport = () => {
-    setContactModalVisible(true);
-  };
-
-  const handleCallSupport = () => {
-    if (userData?.phone) {
-      Linking.openURL(`tel:${userData.phone}`);
-    }
-    setContactModalVisible(false);
-  };
-
-  const handleEmailSupport = () => {
-    if (userData?.email) {
-      Linking.openURL(`mailto:${userData.email}`);
-    }
-    setContactModalVisible(false);
+  const handleBackToHome = () => {
+    navigation.navigate('Home', { userDetails: userData });
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiRemove(['@user_token', '@user_email', '@user_data']);
+            navigation.replace('Login');
+          } catch {}
         },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.removeItem('@user_token');
-              await AsyncStorage.removeItem('@user_email');
-              await AsyncStorage.removeItem('@user_data');
-              
-              navigation.replace('Login');
-            } catch (error) {
-              console.error('Logout error:', error);
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleAddresses = () => {
-    setAddressModalVisible(true);
-  };
-
-  // Simple dropdown modals (keeping your preferred simple version)
+  // Enhanced City Modal
   const renderCityModal = () => (
-    <Modal
-      visible={showCityModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowCityModal(false)}
-    >
+    <Modal visible={showCityModal} transparent animationType="slide" onRequestClose={() => setShowCityModal(false)}>
       <View style={styles.modalOverlay}>
-        <View style={styles.simpleDropdownModal}>
-          <Text style={styles.simpleModalTitle}>Select City</Text>
-          
-          <ScrollView style={styles.simpleScrollView} showsVerticalScrollIndicator={false}>
+        <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select City</Text>
+            <TouchableOpacity onPress={() => setShowCityModal(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            style={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
             {Object.keys(cityAreaData).map((cityKey) => (
               <TouchableOpacity
                 key={cityKey}
-                style={[
-                  styles.simpleDropdownItem,
-                  selectedCity === cityKey && styles.selectedSimpleItem
-                ]}
+                style={[styles.modalItem, selectedCity === cityKey && styles.selectedModalItem]}
                 onPress={() => selectCity(cityKey)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.cityIcon}>
-                  {cityKey === 'jalandhar' ? '🏛️' : '🏙️'}
-                </Text>
-                <Text style={styles.simpleItemText}>
-                  {cityAreaData[cityKey].name}
-                </Text>
-                {selectedCity === cityKey && (
-                  <Text style={styles.simpleCheck}>✓</Text>
-                )}
+                <LinearGradient
+                  colors={
+                    selectedCity === cityKey 
+                      ? [COLORS.primaryUltraLight, COLORS.primaryLight]
+                      : [COLORS.surface, COLORS.surfaceAlt]
+                  }
+                  style={styles.modalItemGradient}
+                >
+                  <View style={styles.modalItemContent}>
+                    <Text style={styles.modalItemIcon}>{cityKey === 'jalandhar' ? '🏛️' : '🏙️'}</Text>
+                    <View style={styles.modalItemText}>
+                      <Text style={[styles.modalItemTitle, selectedCity === cityKey && styles.selectedModalItemTitle]}>
+                        {cityAreaData[cityKey].name}
+                      </Text>
+                      <Text style={styles.modalItemSubtitle}>
+                        {cityAreaData[cityKey].areas.length} areas available
+                      </Text>
+                    </View>
+                    {selectedCity === cityKey && (
+                      <View style={styles.selectedIndicator}>
+                        <LinearGradient
+                          colors={[COLORS.primary, COLORS.primaryDark]}
+                          style={styles.selectedIndicatorGradient}
+                        >
+                          <Text style={styles.selectedIndicatorText}>✓</Text>
+                        </LinearGradient>
+                      </View>
+                    )}
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          
-          <TouchableOpacity
-            style={styles.simpleCancelButton}
-            onPress={() => setShowCityModal(false)}
-          >
-            <Text style={styles.simpleCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 
+  // Enhanced Area Modal
   const renderAreaModal = () => (
-    <Modal
-      visible={showAreaModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowAreaModal(false)}
-    >
+    <Modal visible={showAreaModal} transparent animationType="slide" onRequestClose={() => setShowAreaModal(false)}>
       <View style={styles.modalOverlay}>
-        <View style={styles.simpleDropdownModal}>
-          <Text style={styles.simpleModalTitle}>
-            Select Area in {cityAreaData[selectedCity]?.name}
-          </Text>
-          
-          <ScrollView style={styles.simpleScrollView} showsVerticalScrollIndicator={false}>
+        <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Area</Text>
+            <TouchableOpacity onPress={() => setShowAreaModal(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            style={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
             {selectedCity && cityAreaData[selectedCity]?.areas.map((area) => (
               <TouchableOpacity
                 key={area.id}
-                style={[
-                  styles.simpleDropdownItem,
-                  selectedArea === area.id && styles.selectedSimpleItem
-                ]}
+                style={[styles.modalItem, selectedArea === area.id && styles.selectedModalItem]}
                 onPress={() => selectArea(area.id)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.cityIcon}>{area.icon}</Text>
-                <Text style={styles.simpleItemText}>{area.name}</Text>
-                {selectedArea === area.id && (
-                  <Text style={styles.simpleCheck}>✓</Text>
-                )}
+                <LinearGradient
+                  colors={
+                    selectedArea === area.id 
+                      ? [COLORS.primaryUltraLight, COLORS.primaryLight]
+                      : [COLORS.surface, COLORS.surfaceAlt]
+                  }
+                  style={styles.modalItemGradient}
+                >
+                  <View style={styles.modalItemContent}>
+                    <Text style={styles.modalItemIcon}>{area.icon}</Text>
+                    <View style={styles.modalItemText}>
+                      <Text style={[styles.modalItemTitle, selectedArea === area.id && styles.selectedModalItemTitle]}>
+                        {area.name}
+                      </Text>
+                    </View>
+                    {selectedArea === area.id && (
+                      <View style={styles.selectedIndicator}>
+                        <LinearGradient
+                          colors={[COLORS.primary, COLORS.primaryDark]}
+                          style={styles.selectedIndicatorGradient}
+                        >
+                          <Text style={styles.selectedIndicatorText}>✓</Text>
+                        </LinearGradient>
+                      </View>
+                    )}
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          
-          <TouchableOpacity
-            style={styles.simpleCancelButton}
-            onPress={() => setShowAreaModal(false)}
-          >
-            <Text style={styles.simpleCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 
-  const profileOptions = [
-    {
-      id: '1',
-      title: 'Contact Support',
-      subtitle: 'Get help and support',
-      icon: '💬',
-      onPress: handleContactSupport,
-    },
-    {
-      id: '2',
-      title: 'Addresses',
-      subtitle: 'Manage delivery addresses',
-      icon: '📍',
-      onPress: handleAddresses,
-    },
-  ];
-
-  // Loading screen
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
-          <Text style={styles.loadingText}>Loading your profile...</Text>
-          <Text style={styles.loadingSubtext}>Please wait</Text>
-        </View>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        
+        {/* Enhanced Header */}
+        <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>My Profile</Text>
+          </View>
+        </LinearGradient>
+        
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ProfileSkeleton />
+          <View style={styles.skeletonOptions}>
+            {[1, 2].map((item) => (
+              <View key={item} style={styles.skeletonOption}>
+                <SkeletonCircle size={isTablet ? 48 : 44} style={{ marginRight: SPACING.lg }} />
+                <View style={{ flex: 1 }}>
+                  <SkeletonLine height={FONTS.base} width="60%" />
+                  <SkeletonLine height={FONTS.sm} width="40%" style={{ marginTop: SPACING.xs }} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
-  console.log('Rendering ProfileScreen with data:', userData);
-  
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
-      {/* Header with Back Button and Refresh */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBackToHome}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={() => refreshAllData(true)}>
-          <Text style={styles.refreshButtonText}>🔄</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Profile Info Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
+      {/* Enhanced Professional Header */}
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={handleBackToHome} style={styles.backButton}>
             <LinearGradient
-              colors={['#FF6B35', '#F7931E']}
-              style={styles.avatar}
+              colors={[COLORS.glass, COLORS.glassBlur]}
+              style={styles.backButtonGradient}
             >
-              <Text style={styles.avatarText}>
-                {userData?.name && userData.name !== 'Loading...' 
-                  ? userData.name.charAt(0).toUpperCase() 
-                  : '👤'
-                }
-              </Text>
+              <Text style={styles.backIcon}>←</Text>
             </LinearGradient>
-          </View>
-          <Text style={styles.userName}>{userData?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{userData?.email || 'user@email.com'}</Text>
-          <Text style={styles.userPhone}>{userData?.phone || '+91 9876543210'}</Text>
+          </TouchableOpacity>
           
-          <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-            <Text style={styles.editProfileText}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>My Profile</Text>
+          
+          <TouchableOpacity onPress={() => setEditModalVisible(true)} style={styles.editHeaderButton}>
+            <LinearGradient
+              colors={[COLORS.glass, COLORS.glassBlur]}
+              style={styles.editButtonGradient}
+            >
+              <Text style={styles.editHeaderIcon}>✎</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
+      </LinearGradient>
 
-        {/* Options */}
-        <View style={styles.optionsContainer}>
-          {profileOptions.map((option) => (
-            <View key={option.id} style={styles.optionCard}>
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={option.onPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.optionIcon}>
-                  <Text style={styles.optionEmoji}>{option.icon}</Text>
+      <Animated.ScrollView
+        style={[styles.content, { 
+          opacity: fadeAnim, 
+          transform: [
+            { translateY: slideAnim },
+            { scale: scaleAnim }
+          ] 
+        }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Enhanced Profile Card */}
+        <View style={styles.profileCard}>
+          <LinearGradient colors={[COLORS.surface, COLORS.surfaceElevated]} style={styles.profileGradient}>
+            <View style={styles.profileContent}>
+              <View style={styles.avatarContainer}>
+                <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {userData.name ? userData.name.charAt(0).toUpperCase() : 'U'}
+                  </Text>
+                </LinearGradient>
+                <View style={styles.avatarRing} />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{userData.name || 'User'}</Text>
+                <View style={styles.profileDetails}>
+                  <View style={styles.profileDetail}>
+                    <View style={styles.profileDetailIcon}>
+                      <Text style={styles.profileDetailIconText}>📧</Text>
+                    </View>
+                    <Text style={styles.profileDetailText}>{userData.email}</Text>
+                  </View>
+                  <View style={styles.profileDetail}>
+                    <View style={styles.profileDetailIcon}>
+                      <Text style={styles.profileDetailIconText}>📱</Text>
+                    </View>
+                    <Text style={styles.profileDetailText}>{userData.phone}</Text>
+                  </View>
                 </View>
-                <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>{option.title}</Text>
-                  <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-                </View>
-                <Text style={styles.optionArrow}>→</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          ))}
+          </LinearGradient>
         </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutButtonContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={styles.logoutText}>Logout</Text>
+        {/* Enhanced Options Card */}
+        <View style={styles.optionsCard}>
+          <TouchableOpacity
+            style={styles.optionItem}
+            onPress={() => setAddressModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={[COLORS.surface, COLORS.surfaceAlt]}
+              style={styles.optionGradient}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.optionIconContainer}>
+                  <LinearGradient
+                    colors={[COLORS.primaryLight, COLORS.primaryUltraLight]}
+                    style={styles.optionIconGradient}
+                  >
+                    <Text style={styles.optionIcon}>📍</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Delivery Addresses</Text>
+                  <Text style={styles.optionSubtitle}>Manage your saved addresses</Text>
+                </View>
+              </View>
+              <View style={styles.optionRight}>
+                <View style={styles.optionBadge}>
+                  <LinearGradient
+                    colors={[COLORS.primary, COLORS.primaryDark]}
+                    style={styles.optionBadgeGradient}
+                  >
+                    <Text style={styles.optionBadgeText}>{addresses.length}</Text>
+                  </LinearGradient>
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={styles.optionDivider} />
+
+          <TouchableOpacity
+            style={styles.optionItem}
+            onPress={() => setContactModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={[COLORS.surface, COLORS.surfaceAlt]}
+              style={styles.optionGradient}
+            >
+              <View style={styles.optionLeft}>
+                <View style={styles.optionIconContainer}>
+                  <LinearGradient
+                    colors={[COLORS.accentLight, COLORS.accent + '40']}
+                    style={styles.optionIconGradient}
+                  >
+                    <Text style={styles.optionIcon}>💬</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Customer Support</Text>
+                  <Text style={styles.optionSubtitle}>Get help when you need it</Text>
+                </View>
+              </View>
+              <View style={styles.optionRight}>
+                <Text style={styles.optionArrow}>›</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {/* Enhanced Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+          <LinearGradient
+            colors={[COLORS.errorLight, COLORS.error + '20']}
+            style={styles.logoutGradient}
+          >
+            <Text style={styles.logoutIcon}>🚪</Text>
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>App v1.0.0</Text>
-          <Text style={styles.appInfoSubtext}>Made with ❤️ for users</Text>
+          <Text style={styles.appInfoText}>Version 1.0.0</Text>
+          <Text style={styles.appInfoSubtext}>Made with ❤️ for food lovers</Text>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
-      {/* Contact Support Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={contactModalVisible}
-        onRequestClose={() => setContactModalVisible(false)}
-      >
+      {/* Enhanced Contact Modal */}
+      <Modal visible={contactModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Contact Support</Text>
-            
-            <TouchableOpacity style={styles.contactOption} onPress={handleEmailSupport}>
-              <Text style={styles.contactIcon}>📧</Text>
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>Email</Text>
-                <Text style={styles.contactValue}>{userData?.email || 'support@app.com'}</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.contactOption} onPress={handleCallSupport}>
-              <Text style={styles.contactIcon}>📞</Text>
-              <View style={styles.contactInfo}>
-                <Text style={styles.contactLabel}>Phone</Text>
-                <Text style={styles.contactValue}>{userData?.phone || '+91 9876543210'}</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.closeButton} 
-              onPress={() => setContactModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
+          <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Customer Support</Text>
+              <TouchableOpacity onPress={() => setContactModalVisible(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={styles.contactOption}
+                onPress={() => {
+                  Linking.openURL('mailto:amaclestudio@amaclestuio.com');
+                  setContactModalVisible(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[COLORS.infoLight, COLORS.info + '20']}
+                  style={styles.contactGradient}
+                >
+                  <View style={styles.contactIconContainer}>
+                    <Text style={styles.contactIcon}>📧</Text>
+                  </View>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactTitle}>Email Support</Text>
+                    <Text style={styles.contactSubtitle}>amaclestudio@amaclestuio.com</Text>
+                    <Text style={styles.contactDescription}>Get detailed help via email</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.contactOption}
+                onPress={() => {
+                  Linking.openURL('tel:9797472900');
+                  setContactModalVisible(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[COLORS.successLight, COLORS.success + '20']}
+                  style={styles.contactGradient}
+                >
+                  <View style={styles.contactIconContainer}>
+                    <Text style={styles.contactIcon}>📞</Text>
+                  </View>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactTitle}>Phone Support</Text>
+                    <Text style={styles.contactSubtitle}>+91 9797472900</Text>
+                    <Text style={styles.contactDescription}>Instant help over phone call</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </View>
       </Modal>
 
-      {/* Edit Profile Modal with Enhanced Validation */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={editModalVisible}
-        onRequestClose={() => setEditModalVisible(false)}
-      >
+      {/* Enhanced Edit Profile Modal */}
+      <Modal visible={editModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: height * 0.6 }]}>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Name *</Text>
+          <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Full Name *</Text>
                 <TextInput
-                  style={[
-                    styles.textInput,
-                    editName.trim().length < 2 && editName.trim().length > 0 && styles.invalidInput
-                  ]}
+                  style={styles.formInput}
                   value={editName}
                   onChangeText={setEditName}
-                  placeholder="Enter your name (minimum 2 characters)"
+                  placeholder="Enter your full name"
+                  placeholderTextColor={COLORS.textMuted}
                   editable={!savingProfile}
-                  maxLength={50}
                 />
-                {editName.trim().length > 0 && editName.trim().length < 2 && (
-                  <Text style={styles.validationError}>Name must be at least 2 characters</Text>
-                )}
               </View>
-              
-              {/* Display email as read-only information */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Email (Read Only)</Text>
-                <View style={styles.readOnlyInput}>
-                  <Text style={styles.readOnlyText}>{userData?.email || 'user@email.com'}</Text>
-                  <Text style={styles.readOnlyIcon}>🔒</Text>
-                </View>
-              </View>
-              
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Phone Number *</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Email Address</Text>
                 <TextInput
-                  style={[
-                    styles.textInput,
-                    editPhone.trim() && validatePhone(editPhone) && styles.invalidInput
-                  ]}
+                  style={[styles.formInput, styles.disabledInput]}
+                  value={userData.email}
+                  editable={false}
+                  placeholder="Email address"
+                  placeholderTextColor={COLORS.textMuted}
+                />
+                <Text style={styles.formHint}>Email cannot be changed for security reasons</Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Phone Number *</Text>
+                <TextInput
+                  style={styles.formInput}
                   value={editPhone}
                   onChangeText={setEditPhone}
-                  placeholder="Enter phone number (e.g., +91 9876543210)"
+                  placeholder="Enter phone number"
+                  placeholderTextColor={COLORS.textMuted}
                   keyboardType="phone-pad"
                   editable={!savingProfile}
-                  maxLength={15}
                 />
-                {editPhone.trim() && validatePhone(editPhone) && (
-                  <Text style={styles.validationError}>{validatePhone(editPhone)}</Text>
-                )}
-                <Text style={styles.inputHint}>Format: +91 followed by 10 digits</Text>
               </View>
-            </ScrollView>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => setEditModalVisible(false)}
-                disabled={savingProfile}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.modalButton, 
-                  styles.saveButton,
-                  savingProfile && styles.disabledButton
-                ]} 
+
+              <TouchableOpacity
+                style={[styles.saveButton, savingProfile && styles.disabledButton]}
                 onPress={handleSaveProfile}
                 disabled={savingProfile}
+                activeOpacity={0.8}
               >
-                <Text style={styles.saveButtonText}>
-                  {savingProfile ? 'Saving...' : 'Save Changes'}
-                </Text>
+                <LinearGradient 
+                  colors={[COLORS.primary, COLORS.primaryDark]} 
+                  style={styles.saveButtonGradient}
+                >
+                  {savingProfile && <ActivityIndicator size="small" color={COLORS.surface} style={{ marginRight: 8 }} />}
+                  <Text style={styles.saveButtonText}>
+                    {savingProfile ? 'Updating...' : 'Update Profile'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Enhanced Address Manager Modal */}
+      <Modal visible={addressModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.addressViewModal, { transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>My Addresses ({addresses.length})</Text>
+              <TouchableOpacity
+                onPress={() => setAddressModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
 
-      {/* Address Management Modal with Enhanced Validation */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={addressModalVisible}
-        onRequestClose={() => setAddressModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.addressModalContent}>
-            <Text style={styles.modalTitle}>Manage Addresses</Text>
-            
-            {/* Existing Addresses List */}
-            <View style={styles.addressListContainer}>
-              <Text style={styles.sectionTitle}>Your Addresses</Text>
-              <ScrollView 
-                style={styles.addressList}
-                showsVerticalScrollIndicator={true}
-                nestedScrollEnabled={true}
-              >
-                {loadingAddresses ? (
-                  <View style={styles.loadingAddressesContainer}>
-                    <ActivityIndicator size="small" color="#FF6B35" />
-                    <Text style={styles.loadingAddressesText}>Loading addresses...</Text>
-                  </View>
-                ) : addresses.length > 0 ? (
-                  addresses.map((address) => (
-                    <View key={address.id} style={styles.addressItem}>
-                      <View style={styles.addressInfo}>
-                        <Text style={styles.addressType}>{address.type}</Text>
-                        <Text style={styles.addressText}>
-                          {address.full_address}
-                        </Text>
-                        <Text style={styles.addressLocation}>
-                          {address.area}, {address.city}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.removeAddressButton}
-                        onPress={() => handleRemoveAddress(address.id)}
-                      >
-                        <Text style={styles.removeAddressText}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.noAddressesContainer}>
-                    <Text style={styles.noAddressesText}>No addresses found</Text>
-                    <Text style={styles.noAddressesSubtext}>Add your first address below</Text>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-            
-            {/* Add New Address Section with Validation */}
-            <View style={styles.addAddressContainer}>
-              <ScrollView 
-                style={styles.addAddressScrollView}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
-              >
-                <View style={styles.addAddressSection}>
-                  <Text style={styles.addAddressTitle}>Add New Address</Text>
-                  
-                  {/* Address Type Selector */}
-                  <View style={styles.addressTypeSelector}>
-                    {['Home', 'Work', 'Other'].map((type) => (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.addressTypeButton,
-                          newAddressType === type && styles.selectedAddressType
-                        ]}
-                        onPress={() => setNewAddressType(type)}
-                      >
-                        <Text style={[
-                          styles.addressTypeButtonText,
-                          newAddressType === type && styles.selectedAddressTypeText
-                        ]}>
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Simple City Dropdown */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>City *</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.simpleDropdownContainer,
-                        !selectedCity && styles.requiredField
-                      ]}
-                      onPress={() => setShowCityModal(true)}
-                    >
-                      <Text style={styles.dropdownIcon}>🏙️</Text>
-                      <Text style={[
-                        styles.simpleDropdownText,
-                        !selectedCity && styles.placeholderText
-                      ]}>
-                        {selectedCity ? cityAreaData[selectedCity].name : 'Select your city'}
-                      </Text>
-                      <Text style={styles.simpleArrow}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Simple Area Dropdown */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Area *</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.simpleDropdownContainer,
-                        !selectedCity && styles.disabledDropdown,
-                        selectedCity && !selectedArea && styles.requiredField
-                      ]}
-                      onPress={() => selectedCity && setShowAreaModal(true)}
-                      disabled={!selectedCity}
-                    >
-                      <Text style={styles.dropdownIcon}>📍</Text>
-                      <Text style={[
-                        styles.simpleDropdownText,
-                        (!selectedArea || !selectedCity) && styles.placeholderText
-                      ]}>
-                        {selectedArea && selectedCity ? getSelectedAreaName() : 'Select your area'}
-                      </Text>
-                      <Text style={[
-                        styles.simpleArrow,
-                        !selectedCity && styles.disabledArrow
-                      ]}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Full Address Input with Validation */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Full Address *</Text>
-                    <TextInput
-                      style={[
-                        styles.addressInput,
-                        newAddress.trim() && validateAddress(newAddress) && styles.invalidInput
-                      ]}
-                      value={newAddress}
-                      onChangeText={setNewAddress}
-                      placeholder="Enter full address (house/flat number, street, etc.)"
-                      multiline
-                      numberOfLines={3}
-                      textAlignVertical="top"
-                      maxLength={200}
-                    />
-                    {newAddress.trim() && validateAddress(newAddress) && (
-                      <Text style={styles.validationError}>{validateAddress(newAddress)}</Text>
-                    )}
-                    <Text style={styles.inputHint}>
-                      {newAddress.length}/200 characters (minimum 10 required)
-                    </Text>
-                  </View>
-                  
-                  <TouchableOpacity 
-                    style={[
-                      styles.addAddressButton,
-                      (addingAddress || !newAddress.trim() || !selectedCity || !selectedArea) && styles.disabledButton
-                    ]} 
-                    onPress={handleAddAddress}
-                    disabled={addingAddress || !newAddress.trim() || !selectedCity || !selectedArea}
-                  >
-                    <Text style={styles.addAddressButtonText}>
-                      {addingAddress ? 'Adding...' : 'Add Address'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.closeButton} 
-              onPress={() => {
-                setAddressModalVisible(false);
-                // Reset form when closing
-                setNewAddress('');
-                setNewAddressType('Home');
-                setSelectedCity('');
-                setSelectedArea('');
-              }}
+            <ScrollView
+              style={styles.addressViewList}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
+              {loadingAddresses ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={styles.loadingText}>Loading addresses...</Text>
+                </View>
+              ) : addresses.length > 0 ? (
+                addresses.map((address) => (
+                  <View key={address.id} style={styles.addressDisplayItem}>
+                    <LinearGradient
+                      colors={[COLORS.surface, COLORS.surfaceAlt]}
+                      style={styles.addressItemGradient}
+                    >
+                      <View style={styles.addressHeader}>
+                        <View style={styles.addressTypeContainer}>
+                          <Text style={styles.addressTypeIcon}>
+                            {address.type === 'Home' ? '🏠' : address.type === 'Work' ? '🏢' : '📍'}
+                          </Text>
+                          <Text style={styles.addressType}>{address.type}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleRemoveAddress(address.id)}
+                          style={styles.removeAddressButton}
+                          activeOpacity={0.7}
+                        >
+                          <LinearGradient
+                            colors={[COLORS.errorLight, COLORS.error + '20']}
+                            style={styles.removeButtonGradient}
+                          >
+                            <Text style={styles.removeAddressIcon}>🗑️</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.addressText}>{address.full_address}</Text>
+                      <Text style={styles.addressLocation}>
+                        {address.area}, {address.city}
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyAddressContainer}>
+                  <Text style={styles.emptyAddressIcon}>📍</Text>
+                  <Text style={styles.emptyAddressTitle}>No addresses saved</Text>
+                  <Text style={styles.emptyAddressText}>
+                    Add your first delivery address by tapping the + button below
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.addButtonContainer}>
+              <TouchableOpacity
+                style={styles.floatingAddButton}
+                onPress={() => {
+                  setAddressModalVisible(false);
+                  setAddAddressModalVisible(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <LinearGradient colors={[COLORS.teal, '#00695C']} style={styles.floatingAddButtonGradient}>
+                  <Text style={styles.floatingAddIcon}>+</Text>
+                  <Text style={styles.floatingAddText}>Add New Address</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </View>
       </Modal>
 
-      {/* City Selection Modal */}
+      {/* Enhanced Add Address Modal */}
+      <Modal visible={addAddressModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.addAddressModal, { transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Address</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setAddAddressModalVisible(false);
+                  setNewAddress('');
+                  setNewAddressType('Home');
+                  setSelectedCity('');
+                  setSelectedArea('');
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.addFormScrollView}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Enhanced Address Type Selector */}
+              <View style={styles.newTypeSelector}>
+                {[
+                  { type: 'Home', icon: '🏠', gradient: [COLORS.success, COLORS.success + 'DD'] },
+                  { type: 'Work', icon: '🏢', gradient: [COLORS.info, COLORS.info + 'DD'] },
+                  { type: 'Other', icon: '📍', gradient: [COLORS.purple, COLORS.purple + 'DD'] },
+                ].map((typeOption) => (
+                  <TouchableOpacity
+                    key={typeOption.type}
+                    style={[styles.newTypeButton, newAddressType === typeOption.type && styles.selectedNewType]}
+                    onPress={() => setNewAddressType(typeOption.type)}
+                    activeOpacity={0.8}
+                  >
+                    {newAddressType === typeOption.type ? (
+                      <LinearGradient colors={typeOption.gradient} style={styles.newTypeButtonGradient}>
+                        <Text style={styles.newTypeButtonIcon}>{typeOption.icon}</Text>
+                        <Text style={styles.selectedNewTypeText}>{typeOption.type}</Text>
+                      </LinearGradient>
+                    ) : (
+                      <LinearGradient colors={[COLORS.surface, COLORS.surfaceAlt]} style={styles.unselectedNewType}>
+                        <Text style={styles.unselectedNewTypeIcon}>{typeOption.icon}</Text>
+                        <Text style={styles.unselectedNewTypeText}>{typeOption.type}</Text>
+                      </LinearGradient>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* City Dropdown */}
+              <TouchableOpacity
+                style={styles.newFormDropdown}
+                onPress={() => setShowCityModal(true)}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[COLORS.surface, COLORS.surfaceAlt]}
+                  style={styles.dropdownGradient}
+                >
+                  <Text style={[styles.newFormDropdownText, !selectedCity && styles.newFormDropdownPlaceholder]}>
+                    {selectedCity ? cityAreaData[selectedCity].name : 'Select City'}
+                  </Text>
+                  <Text style={styles.newFormDropdownArrow}>▼</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Area Dropdown */}
+              <TouchableOpacity
+                style={[styles.newFormDropdown, !selectedCity && styles.disabledNewFormDropdown]}
+                onPress={() => selectedCity && setShowAreaModal(true)}
+                disabled={!selectedCity}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[COLORS.surface, COLORS.surfaceAlt]}
+                  style={[styles.dropdownGradient, !selectedCity && { opacity: 0.5 }]}
+                >
+                  <Text style={[styles.newFormDropdownText, (!selectedArea || !selectedCity) && styles.newFormDropdownPlaceholder]}>
+                    {selectedArea && selectedCity ? getSelectedAreaName() : 'Select Area'}
+                  </Text>
+                  <Text style={styles.newFormDropdownArrow}>▼</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Address Input */}
+              <View style={styles.addressInputContainer}>
+                <TextInput
+                  style={styles.newAddressTextInput}
+                  value={newAddress}
+                  onChangeText={setNewAddress}
+                  placeholder="Enter complete address (House no., Street, Landmark...)"
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Enhanced Add Button */}
+              <TouchableOpacity
+                style={[
+                  styles.newAddAddressButton,
+                  (addingAddress || !newAddress.trim() || !selectedCity || !selectedArea) && styles.disabledButton,
+                ]}
+                onPress={handleAddAddress}
+                disabled={addingAddress || !newAddress.trim() || !selectedCity || !selectedArea}
+                activeOpacity={0.8}
+              >
+                <LinearGradient 
+                  colors={[COLORS.indigo, COLORS.indigo + 'DD']} 
+                  style={styles.newAddAddressButtonGradient}
+                >
+                  {addingAddress && <ActivityIndicator size="small" color={COLORS.surface} style={{ marginRight: 8 }} />}
+                  <Text style={styles.newAddAddressButtonText}>
+                    {addingAddress ? 'Adding Address...' : '✅ Save Address'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* City and Area Modals */}
       {renderCityModal()}
-      
-      {/* Area Selection Modal */}
       {renderAreaModal()}
     </SafeAreaView>
   );
 }
 
-// Complete StyleSheet with all styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 18,
-    color: '#374151',
-    fontWeight: '600',
-  },
-  loadingSubtext: {
-    marginTop: 5,
-    fontSize: 14,
-    color: '#6B7280',
-  },
+
+  // Enhanced Header Styles
   header: {
+    paddingTop: Platform.OS === 'ios' ? SPACING.md : SPACING.lg,
+    paddingBottom: SPACING.xl,
+    elevation: 8,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    justifyContent: 'space-between',
+    paddingHorizontal: SCREEN_PADDING,
   },
   backButton: {
-    padding: 8,
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
-  },
-  refreshButton: {
-    padding: 8,
-  },
-  refreshButtonText: {
-    fontSize: 18,
-    color: '#FF6B35',
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-
-  // Profile Card
-  profileCard: {
-    backgroundColor: '#ffffff',
-    margin: 20,
-    borderRadius: 20,
-    padding: 25,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  avatarContainer: {
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  backButtonGradient: {
+    width: isTablet ? 48 : 40,
+    height: isTablet ? 48 : 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  avatarText: {
-    fontSize: 32,
-    color: '#ffffff',
-    fontWeight: 'bold',
+  backIcon: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    color: COLORS.textInverse,
+    fontWeight: '800',
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 8,
-    textAlign: 'center',
+  headerTitle: {
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
+    fontWeight: '800',
+    color: COLORS.textInverse,
+    letterSpacing: 0.3,
   },
-  userEmail: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 4,
-    textAlign: 'center',
+  editHeaderButton: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
-  userPhone: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 20,
-    textAlign: 'center',
+  editButtonGradient: {
+    width: isTablet ? 48 : 40,
+    height: isTablet ? 48 : 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  editProfileButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-  },
-  editProfileText: {
-    color: '#ffffff',
-    fontSize: 16,
+  editHeaderIcon: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textInverse,
     fontWeight: '600',
   },
 
-  // Options
-  optionsContainer: {
-    paddingHorizontal: 20,
+  // Content Styles
+  content: {
+    flex: 1,
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: SPACING.xl,
   },
-  optionCard: {
-    marginBottom: 15,
+
+  // Enhanced Profile Card Styles
+  profileCard: {
+    borderRadius: BORDER_RADIUS.xxl,
+    marginBottom: SPACING.xl,
+    elevation: 8,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    overflow: 'hidden',
   },
-  optionButton: {
+  profileGradient: {
+    padding: isTablet ? SPACING.xxxl : SPACING.xl,
+  },
+  profileContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: isTablet ? SPACING.xl : SPACING.lg,
+  },
+  avatar: {
+    width: isTablet ? 80 : 70,
+    height: isTablet ? 80 : 70,
+    borderRadius: isTablet ? 40 : 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  avatarRing: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: isTablet ? 44 : 39,
+    borderWidth: 2,
+    borderColor: COLORS.primaryLight,
+    opacity: 0.6,
+  },
+  avatarText: {
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
+    fontWeight: '900',
+    color: COLORS.textInverse,
+    letterSpacing: 0.5,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    letterSpacing: 0.3,
+  },
+  profileDetails: {
+    gap: SPACING.sm,
+  },
+  profileDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileDetailIcon: {
+    width: isTablet ? 24 : 20,
+    height: isTablet ? 24 : 20,
+    borderRadius: isTablet ? 12 : 10,
+    backgroundColor: COLORS.primaryUltraLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  profileDetailIconText: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+  },
+  profileDetailText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  // Enhanced Options Card Styles
+  optionsCard: {
+    borderRadius: BORDER_RADIUS.xl,
+    marginBottom: SPACING.xl,
+    elevation: 4,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  optionItem: {
+    overflow: 'hidden',
+  },
+  optionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+  },
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  optionIconContainer: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    marginRight: isTablet ? SPACING.lg : SPACING.md,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
-  optionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#FF6B3520',
+  optionIconGradient: {
+    width: isTablet ? 52 : 44,
+    height: isTablet ? 52 : 44,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  optionEmoji: {
-    fontSize: 22,
+  optionIcon: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
   },
-  optionContent: {
+  optionTextContainer: {
     flex: 1,
   },
   optionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+    letterSpacing: 0.2,
   },
   optionSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  optionRight: {
+    alignItems: 'center',
+  },
+  optionBadge: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    elevation: 2,
+  },
+  optionBadgeGradient: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    minWidth: isTablet ? 32 : 28,
+    alignItems: 'center',
+  },
+  optionBadgeText: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    fontWeight: '800',
+    color: COLORS.textInverse,
   },
   optionArrow: {
-    fontSize: 18,
-    color: '#9CA3AF',
-    fontWeight: 'bold',
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    color: COLORS.textMuted,
+    fontWeight: '300',
+  },
+  optionDivider: {
+    height: 1,
+    backgroundColor: COLORS.borderLight,
+    marginHorizontal: isTablet ? SPACING.xl : SPACING.lg,
   },
 
-  // Logout
-  logoutButtonContainer: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
+  // Enhanced Logout Button Styles
   logoutButton: {
+    borderRadius: BORDER_RADIUS.xl,
+    marginBottom: SPACING.xl,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    overflow: 'hidden',
+  },
+  logoutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#EF4444',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: SPACING.xl,
   },
   logoutIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    marginRight: SPACING.md,
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EF4444',
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.error,
+    letterSpacing: 0.2,
   },
 
-  // App Info
+  // App Info Styles
   appInfo: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: SPACING.xxxl,
   },
   appInfoText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginBottom: 4,
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+    fontWeight: '600',
   },
   appInfoSubtext: {
-    fontSize: 13,
-    color: '#9CA3AF',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '400',
   },
 
-  // Modal Styles
+  // Enhanced Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    maxHeight: height * 0.8,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  
+  addressViewModal: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    height: height * 0.8,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  
+  addAddressModal: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    height: height * 0.85,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+  },
+  
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginVertical: SPACING.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalTitle: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.2,
+  },
+  closeButton: {
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  closeButtonText: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  modalContent: {
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingTop: SPACING.xl,
+  },
+
+  // Enhanced Modal Item Styles
+  modalItem: {
+    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  selectedModalItem: {},
+  modalItemGradient: {
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    paddingHorizontal: isTablet ? SPACING.lg : SPACING.md,
+  },
+  modalItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalItemIcon: {
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    marginRight: isTablet ? SPACING.lg : SPACING.md,
+    width: isTablet ? 32 : 28,
+  },
+  modalItemText: {
+    flex: 1,
+  },
+  modalItemTitle: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  selectedModalItemTitle: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  modalItemSubtitle: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  selectedIndicator: {
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  selectedIndicatorGradient: {
+    width: isTablet ? 28 : 24,
+    height: isTablet ? 28 : 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    width: width * 0.9,
-    maxHeight: height * 0.8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 20,
-    textAlign: 'center',
+  selectedIndicatorText: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textInverse,
+    fontWeight: '800',
   },
 
-  // Contact Modal
+  // Enhanced Contact Option Styles
   contactOption: {
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.md,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  contactGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+  },
+  contactIconContainer: {
+    width: isTablet ? 56 : 48,
+    height: isTablet ? 56 : 48,
+    borderRadius: isTablet ? 28 : 24,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: isTablet ? SPACING.xl : SPACING.lg,
+    elevation: 2,
   },
   contactIcon: {
-    fontSize: 24,
-    marginRight: 15,
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
   },
   contactInfo: {
     flex: 1,
   },
-  contactLabel: {
-    fontSize: 16,
+  contactTitle: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  contactSubtitle: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
     fontWeight: '600',
-    color: '#1F2937',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
   },
-  contactValue: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  closeButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '600',
+  contactDescription: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '500',
   },
 
-  // Edit Profile Modal
-  inputContainer: {
-    marginBottom: 20,
+  // Enhanced Form Styles
+  formGroup: {
+    marginBottom: SPACING.xl,
   },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
+  formLabel: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    letterSpacing: 0.2,
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
+  formInput: {
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textPrimary,
+    fontWeight: '500',
   },
-  
-  // Read-only email display styles
-  readOnlyInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: '#F3F4F6',
+  disabledInput: {
+    backgroundColor: COLORS.surfaceAlt,
+    color: COLORS.textMuted,
   },
-  readOnlyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    flex: 1,
-  },
-  readOnlyIcon: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#F3F4F6',
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '600',
+  formHint: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
   saveButton: {
-    backgroundColor: '#FF6B35',
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    marginTop: SPACING.xl,
+    elevation: 4,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  saveButtonGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
   },
   saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+    letterSpacing: 0.3,
   },
-
-  // Validation styles
-  invalidInput: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-    backgroundColor: '#FEF2F2',
-  },
-  validationError: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  inputHint: {
-    color: '#6B7280',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-    fontStyle: 'italic',
-  },
-  requiredField: {
-    borderColor: '#F59E0B',
-    borderWidth: 1,
-  },
-
-  // Address Modal
-  addressModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 15,
-    width: width * 0.95,
-    height: height * 0.85,
-    maxHeight: height * 0.85,
-  },
-  
-  // Address list container
-  addressListContainer: {
-    flex: 0.35,
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 10,
-  },
-  addressList: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    padding: 10,
-  },
-  
-  // Add address container
-  addAddressContainer: {
-    flex: 0.6,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 15,
-  },
-  addAddressScrollView: {
-    flex: 1,
-  },
-
-  // Loading states
-  loadingAddressesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  loadingAddressesText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  noAddressesContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  noAddressesText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  noAddressesSubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 5,
-  },
-
-  // Address items
-  addressItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  addressInfo: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  addressType: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  addressText: {
-    fontSize: 14,
-    color: '#1F2937',
-    marginBottom: 2,
-    lineHeight: 18,
-  },
-  addressLocation: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  removeAddressButton: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  removeAddressText: {
-    color: '#DC2626',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Add address section
-  addAddressSection: {
-    paddingBottom: 10,
-  },
-  addAddressTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 15,
-  },
-  addressTypeSelector: {
-    flexDirection: 'row',
-    marginBottom: 15,
-    flexWrap: 'wrap',
-  },
-  addressTypeButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    marginRight: 10,
-    marginBottom: 8,
-  },
-  selectedAddressType: {
-    backgroundColor: '#FF6B35',
-  },
-  addressTypeButtonText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  selectedAddressTypeText: {
-    color: '#ffffff',
-  },
-
-  // Address form
-  inputGroup: {
-    marginBottom: 15,
-  },
-
-  // Simple dropdown styles
-  simpleDropdownContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    minHeight: 50,
-  },
-  simpleDropdownText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1F2937',
-    marginLeft: 10,
-  },
-  dropdownIcon: {
-    fontSize: 18,
-  },
-  simpleArrow: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginLeft: 10,
-  },
-  placeholderText: {
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-  },
-  disabledDropdown: {
-    backgroundColor: '#F3F4F6',
-    opacity: 0.6,
-  },
-  disabledArrow: {
-    color: '#D1D5DB',
-  },
-
-  // Simple modal styles
-  simpleDropdownModal: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    margin: 20,
-    maxHeight: height * 0.6,
-  },
-  simpleModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  simpleScrollView: {
-    maxHeight: height * 0.4,
-  },
-  simpleDropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 5,
-    backgroundColor: '#F9FAFB',
-  },
-  selectedSimpleItem: {
-    backgroundColor: '#FEF3E2',
-    borderColor: '#FF6B35',
-    borderWidth: 1,
-  },
-  cityIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    width: 25,
-  },
-  simpleItemText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1F2937',
-  },
-  simpleCheck: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: 'bold',
-  },
-  simpleCancelButton: {
-    marginTop: 15,
-    paddingVertical: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  simpleCancelText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  
-  // Address input
-  addressInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-    height: 90,
-    textAlignVertical: 'top',
-  },
-  
-  addAddressButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  
-  addAddressButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  
   disabledButton: {
     opacity: 0.6,
-    backgroundColor: '#9CA3AF',
+  },
+
+  // Address View Styles
+  addressViewList: {
+    flex: 1,
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+  },
+  addressDisplayItem: {
+    marginBottom: SPACING.lg,
+    borderRadius: BORDER_RADIUS.xl,
+    elevation: 3,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    overflow: 'hidden',
+  },
+  addressItemGradient: {
+    padding: isTablet ? SPACING.xl : SPACING.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  addressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  addressTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addressTypeIcon: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    marginRight: SPACING.md,
+  },
+  addressType: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 0.3,
+  },
+  removeAddressButton: {
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    elevation: 2,
+  },
+  removeButtonGradient: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  removeAddressIcon: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+  },
+  addressText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    lineHeight: isTablet ? 24 : 20,
+    marginBottom: SPACING.sm,
+    fontWeight: '500',
+  },
+  addressLocation: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+
+  // Empty State Styles
+  emptyAddressContainer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxxl * 2,
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyAddressIcon: {
+    fontSize: 64,
+    marginBottom: SPACING.xl,
+  },
+  emptyAddressTitle: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  emptyAddressText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: isTablet ? 26 : 22,
+    fontWeight: '500',
+  },
+
+  // Floating Add Button Styles
+  addButtonContainer: {
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingVertical: SPACING.xl,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  floatingAddButton: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  floatingAddButtonGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+  },
+  floatingAddIcon: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    color: COLORS.textInverse,
+    fontWeight: '600',
+    marginRight: SPACING.md,
+  },
+  floatingAddText: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+    letterSpacing: 0.3,
+  },
+
+  // Add Form Styles
+  addFormScrollView: {
+    flex: 1,
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingTop: SPACING.xl,
+  },
+
+  // Enhanced Type Selector
+  newTypeSelector: {
+    flexDirection: 'row',
+    marginBottom: SPACING.xxl,
+    gap: SPACING.md,
+  },
+  newTypeButton: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  selectedNewType: {
+    elevation: 6,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  newTypeButtonGradient: {
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    alignItems: 'center',
+  },
+  unselectedNewType: {
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    alignItems: 'center',
+  },
+  newTypeButtonIcon: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    marginBottom: SPACING.md,
+  },
+  selectedNewTypeText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+    letterSpacing: 0.3,
+  },
+  unselectedNewTypeIcon: {
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
+    marginBottom: SPACING.md,
+    opacity: 0.6,
+  },
+  unselectedNewTypeText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+
+  // Form Dropdown Styles
+  newFormDropdown: {
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  disabledNewFormDropdown: {
+    opacity: 0.5,
+  },
+  dropdownGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+  },
+  newFormDropdownText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  newFormDropdownPlaceholder: {
+    color: COLORS.textMuted,
+  },
+  newFormDropdownArrow: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+
+  // Address Input Styles
+  addressInputContainer: {
+    marginBottom: SPACING.xxl,
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  newAddressTextInput: {
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: isTablet ? SPACING.xl : SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textPrimary,
+    minHeight: isTablet ? 140 : 120,
+    textAlignVertical: 'top',
+    fontWeight: '500',
+  },
+
+  // Add Button Styles
+  newAddAddressButton: {
+    borderRadius: BORDER_RADIUS.xl,
+    overflow: 'hidden',
+    marginBottom: SPACING.xl,
+    elevation: 6,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  newAddAddressButtonGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+  },
+  newAddAddressButtonText: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+    letterSpacing: 0.3,
+  },
+
+  // Loading Styles
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxxl * 2,
+  },
+  loadingText: {
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.lg,
+    fontWeight: '500',
+  },
+
+  // Skeleton Styles
+  skeletonProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: isTablet ? SPACING.xxxl : SPACING.xl,
+  },
+  skeletonOptions: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: isTablet ? SPACING.xl : SPACING.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  skeletonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: isTablet ? SPACING.xl : SPACING.lg,
   },
 });
