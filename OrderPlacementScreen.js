@@ -264,14 +264,8 @@ export default function OrderPlacementScreen() {
         setShowAddAddressModal(false);
         
         // Show success and refresh addresses
-        Alert.alert('Success', 'Address added successfully!', [
-          {
-            text: 'OK',
-            onPress: async () => {
-              await fetchAddresses();
-            }
-          }
-        ]);
+        await fetchAddresses();
+      
         
       } else {
         console.error('❌ Failed to add address:', result);

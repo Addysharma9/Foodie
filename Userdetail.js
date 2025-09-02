@@ -12,12 +12,106 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
+const isTablet = width > 768;
+
+// Professional spacing system (matching HomeScreen)
+const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+const SCREEN_PADDING = width * 0.04;
+
+// Enhanced border radius system
+const BORDER_RADIUS = {
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  xxl: 20,
+  xxxl: 24,
+};
+
+// Professional typography scale
+const FONT_SCALE = Math.min(width / 375, 1.3);
+const FONTS = {
+  xs: 11 * FONT_SCALE,
+  sm: 13 * FONT_SCALE,
+  base: 15 * FONT_SCALE,
+  lg: 17 * FONT_SCALE,
+  xl: 19 * FONT_SCALE,
+  xxl: 22 * FONT_SCALE,
+  xxxl: 26 * FONT_SCALE,
+  huge: 32 * FONT_SCALE,
+};
+
+// Professional color palette (matching HomeScreen)
+const COLORS = {
+  // Primary brand colors with depth
+  primary: '#FF6B35',
+  primaryDark: '#E8541C',
+  primaryLight: '#FFE8E0',
+  primaryUltraLight: '#FFF5F2',
+  
+  // Enhanced secondary colors
+  secondary: '#4A90E2',
+  accent: '#F7B731',
+  accentLight: '#FEF3CD',
+  
+  // Sophisticated neutrals
+  background: '#FAFBFC',
+  surface: '#FFFFFF',
+  surfaceElevated: '#FFFFFF',
+  surfaceAlt: '#F8F9FA',
+  surfaceCard: '#FFFFFF',
+  
+  // Typography hierarchy
+  text: '#1A1D29',
+  textPrimary: '#2C2F36',
+  textSecondary: '#6C7278',
+  textMuted: '#9CA3AF',
+  textDisabled: '#D1D5DB',
+  textInverse: '#FFFFFF',
+  
+  // Status colors
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  error: '#EF4444',
+  errorLight: '#FEE2E2',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  
+  // Enhanced borders and dividers
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
+  divider: '#F1F3F4',
+  
+  // Professional shadows
+  shadow: 'rgba(17, 25, 40, 0.12)',
+  shadowDark: 'rgba(17, 25, 40, 0.25)',
+  shadowLight: 'rgba(17, 25, 40, 0.06)',
+  
+  // Glass morphism
+  glass: 'rgba(255, 255, 255, 0.85)',
+  glassBlur: 'rgba(255, 255, 255, 0.2)',
+};
 
 const cityAreaData = {
   jalandhar: {
@@ -71,17 +165,31 @@ export default function UserDetailsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(30)).current;
   const formScaleAnim = useRef(new Animated.Value(0.95)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Logo rotation animation
+    Animated.loop(
+      Animated.timing(logoRotateAnim, {
+        toValue: 1,
+        duration: 10000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Main animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(slideUpAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
+        easing: Easing.out(Easing.back(1.2)),
         useNativeDriver: true,
       }),
       Animated.spring(formScaleAnim, {
@@ -222,7 +330,6 @@ export default function UserDetailsScreen() {
             registrationCompleted: true,
             completedAt: new Date().toISOString(),
             lastUpdated: new Date().toISOString(),
-            
           };
 
           await AsyncStorage.setItem('@user_data', JSON.stringify(updatedUserData));
@@ -281,6 +388,11 @@ export default function UserDetailsScreen() {
     return area ? area.name : '';
   };
 
+  const logoRotation = logoRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   const renderCityModal = () => (
     <Modal
       visible={showCityModal}
@@ -289,9 +401,15 @@ export default function UserDetailsScreen() {
       onRequestClose={() => setShowCityModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Select City</Text>
-          <ScrollView style={styles.modalScrollView}>
+        <Animated.View style={[styles.modalContent, { transform: [{ scale: formScaleAnim }] }]}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select City</Text>
+            <TouchableOpacity onPress={() => setShowCityModal(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
             {Object.keys(cityAreaData).map((cityKey) => (
               <TouchableOpacity
                 key={cityKey}
@@ -300,24 +418,40 @@ export default function UserDetailsScreen() {
                   selectedCity === cityKey && styles.selectedModalItem
                 ]}
                 onPress={() => selectCity(cityKey)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalItemIcon}>
-                  {cityKey === 'jalandhar' ? '🏛️' : '🏙️'}
-                </Text>
-                <Text style={styles.modalItemText}>{cityAreaData[cityKey].name}</Text>
-                {selectedCity === cityKey && (
-                  <Text style={styles.checkIcon}>✓</Text>
-                )}
+                <LinearGradient
+                  colors={
+                    selectedCity === cityKey 
+                      ? [COLORS.primaryUltraLight, COLORS.primaryLight]
+                      : [COLORS.surface, COLORS.surfaceAlt]
+                  }
+                  style={styles.modalItemGradient}
+                >
+                  <Text style={styles.modalItemIcon}>
+                    {cityKey === 'jalandhar' ? '🏛️' : '🏙️'}
+                  </Text>
+                  <Text style={[
+                    styles.modalItemText,
+                    selectedCity === cityKey && styles.selectedModalItemText
+                  ]}>
+                    {cityAreaData[cityKey].name}
+                  </Text>
+                  {selectedCity === cityKey && (
+                    <View style={styles.selectedIndicator}>
+                      <LinearGradient
+                        colors={[COLORS.primary, COLORS.primaryDark]}
+                        style={styles.selectedIndicatorGradient}
+                      >
+                        <Text style={styles.checkIcon}>✓</Text>
+                      </LinearGradient>
+                    </View>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowCityModal(false)}
-          >
-            <Text style={styles.modalCloseText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -330,11 +464,17 @@ export default function UserDetailsScreen() {
       onRequestClose={() => setShowAreaModal(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            Select Area in {cityAreaData[selectedCity]?.name}
-          </Text>
-          <ScrollView style={styles.modalScrollView}>
+        <Animated.View style={[styles.modalContent, { transform: [{ scale: formScaleAnim }] }]}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              Select Area in {cityAreaData[selectedCity]?.name}
+            </Text>
+            <TouchableOpacity onPress={() => setShowAreaModal(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
             {selectedCity && cityAreaData[selectedCity]?.areas.map((area) => (
               <TouchableOpacity
                 key={area.id}
@@ -343,207 +483,281 @@ export default function UserDetailsScreen() {
                   selectedArea === area.id && styles.selectedModalItem
                 ]}
                 onPress={() => selectArea(area.id)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalItemIcon}>{area.icon}</Text>
-                <Text style={styles.modalItemText}>{area.name}</Text>
-                {selectedArea === area.id && (
-                  <Text style={styles.checkIcon}>✓</Text>
-                )}
+                <LinearGradient
+                  colors={
+                    selectedArea === area.id 
+                      ? [COLORS.primaryUltraLight, COLORS.primaryLight]
+                      : [COLORS.surface, COLORS.surfaceAlt]
+                  }
+                  style={styles.modalItemGradient}
+                >
+                  <Text style={styles.modalItemIcon}>{area.icon}</Text>
+                  <Text style={[
+                    styles.modalItemText,
+                    selectedArea === area.id && styles.selectedModalItemText
+                  ]}>
+                    {area.name}
+                  </Text>
+                  {selectedArea === area.id && (
+                    <View style={styles.selectedIndicator}>
+                      <LinearGradient
+                        colors={[COLORS.primary, COLORS.primaryDark]}
+                        style={styles.selectedIndicatorGradient}
+                      >
+                        <Text style={styles.checkIcon}>✓</Text>
+                      </LinearGradient>
+                    </View>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowAreaModal(false)}
-          >
-            <Text style={styles.modalCloseText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       
-      <Animated.View 
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideUpAnim }],
-          },
-        ]}
+      {/* FIXED: KeyboardAvoidingView for proper keyboard handling */}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <LinearGradient
-              colors={['#FF6B35', '#F7931E']}
-              style={styles.logoCircle}
-            >
-              <Text style={styles.logoText}>📍</Text>
-            </LinearGradient>
-          </View>
-          <Text style={styles.appTitle}>
-            Almost <Text style={styles.appTitleAccent}>There!</Text>
-          </Text>
-          <Text style={styles.appSubtitle}>
-            Help us deliver to your doorstep
-          </Text>
-          
-          {/* Display user info if available */}
-          {cacheData && (
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userInfoText}>
-                Welcome, {cacheData.displayName || userEmail}!
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Form Card */}
         <Animated.View 
           style={[
-            styles.formCard,
-            { transform: [{ scale: formScaleAnim }] }
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideUpAnim }],
+            },
           ]}
         >
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+          {/* Enhanced Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Animated.View style={[{ transform: [{ rotate: logoRotation }] }]}>
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.primaryDark]}
+                  style={styles.logoCircle}
+                >
+                  <Text style={styles.logoText}>📍</Text>
+                  <View style={styles.logoRing} />
+                </LinearGradient>
+              </Animated.View>
+            </View>
+            <Text style={styles.appTitle}>
+              Almost <Text style={styles.appTitleAccent}>There!</Text>
+            </Text>
+            <Text style={styles.appSubtitle}>
+              Help us deliver to your doorstep
+            </Text>
+            
+            {/* Display user info if available */}
+            {cacheData && (
+              <View style={styles.userInfoContainer}>
+                <LinearGradient
+                  colors={[COLORS.primaryUltraLight, COLORS.primaryLight]}
+                  style={styles.userInfoGradient}
+                >
+                  <Text style={styles.userInfoText}>
+                    Welcome, {cacheData.displayName || userEmail}!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )}
+          </View>
+
+          {/* Enhanced Form Card */}
+          <Animated.View 
+            style={[
+              styles.formCard,
+              { transform: [{ scale: formScaleAnim }] }
+            ]}
           >
-            {/* Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <View style={[styles.inputContainer, errors.name && styles.inputError]}>
-                <Text style={styles.inputIcon}>👤</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#9CA3AF"
-                  value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-                  }}
-                />
-              </View>
-              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-            </View>
-
-            {/* Phone Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
-                <Text style={styles.inputIcon}>📱</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor="#9CA3AF"
-                  value={phone}
-                  onChangeText={(text) => {
-                    setPhone(text.replace(/[^0-9]/g, ''));
-                    if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
-                  }}
-                  keyboardType="numeric"
-                  maxLength={10}
-                />
-              </View>
-              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-            </View>
-
-            {/* City Dropdown */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>City</Text>
-              <TouchableOpacity
-                style={[styles.dropdownContainer, errors.city && styles.inputError]}
-                onPress={() => setShowCityModal(true)}
-              >
-                <Text style={styles.inputIcon}>🏙️</Text>
-                <Text style={[
-                  styles.dropdownText,
-                  !selectedCity && styles.placeholderText
-                ]}>
-                  {selectedCity ? cityAreaData[selectedCity].name : 'Select your city'}
-                </Text>
-                <Text style={styles.dropdownArrow}>▼</Text>
-              </TouchableOpacity>
-              {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-            </View>
-
-            {/* Area Dropdown */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Area</Text>
-              <TouchableOpacity
-                style={[
-                  styles.dropdownContainer,
-                  !selectedCity && styles.disabledDropdown,
-                  errors.area && styles.inputError
-                ]}
-                onPress={() => selectedCity && setShowAreaModal(true)}
-                disabled={!selectedCity}
-              >
-                <Text style={styles.inputIcon}>📍</Text>
-                <Text style={[
-                  styles.dropdownText,
-                  (!selectedArea || !selectedCity) && styles.placeholderText
-                ]}>
-                  {selectedArea && selectedCity ? getSelectedAreaName() : 'Select your area'}
-                </Text>
-                <Text style={[
-                  styles.dropdownArrow,
-                  !selectedCity && styles.disabledArrow
-                ]}>▼</Text>
-              </TouchableOpacity>
-              {errors.area && <Text style={styles.errorText}>{errors.area}</Text>}
-            </View>
-
-            {/* Full Address Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Address</Text>
-              <View style={[styles.addressContainer, errors.fullAddress && styles.inputError]}>
-                <Text style={styles.inputIcon}>🏠</Text>
-                <TextInput
-                  style={[styles.textInput, styles.addressInput]}
-                  placeholder="House/flat number, street, etc."
-                  placeholderTextColor="#9CA3AF"
-                  value={fullAddress}
-                  onChangeText={(text) => {
-                    setFullAddress(text);
-                    if (errors.fullAddress) setErrors(prev => ({ ...prev, fullAddress: '' }));
-                  }}
-                  multiline={true}
-                  numberOfLines={2}
-                  textAlignVertical="top"
-                />
-              </View>
-              {errors.fullAddress && <Text style={styles.errorText}>{errors.fullAddress}</Text>}
-            </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitButton, isLoading && styles.disabledButton]}
-              onPress={handleSubmit}
-              activeOpacity={0.8}
-              disabled={isLoading}
+            <LinearGradient
+              colors={[COLORS.surface, COLORS.surfaceElevated]}
+              style={styles.formGradient}
             >
-              <LinearGradient
-                colors={['#FF6B35', '#F7931E']}
-                style={styles.submitGradient}
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.scrollContent}
               >
-                <Text style={styles.submitButtonText}>
-                  {isLoading ? 'Registering...' : 'Complete Registration'}
-                </Text>
-                {!isLoading && <Text style={styles.submitArrow}>→</Text>}
-              </LinearGradient>
-            </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
+                {/* Name Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <View style={[styles.inputContainer, errors.name && styles.inputError]}>
+                    <LinearGradient
+                      colors={[COLORS.surfaceAlt, COLORS.surface]}
+                      style={styles.inputGradient}
+                    >
+                      <View style={styles.inputIconContainer}>
+                        <Text style={styles.inputIcon}>👤</Text>
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Enter your full name"
+                        placeholderTextColor={COLORS.textMuted}
+                        value={name}
+                        onChangeText={(text) => {
+                          setName(text);
+                          if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                        }}
+                      />
+                    </LinearGradient>
+                  </View>
+                  {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+                </View>
 
-      {/* Modals */}
+                {/* Phone Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Phone Number</Text>
+                  <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
+                    <LinearGradient
+                      colors={[COLORS.surfaceAlt, COLORS.surface]}
+                      style={styles.inputGradient}
+                    >
+                      <View style={styles.inputIconContainer}>
+                        <Text style={styles.inputIcon}>📱</Text>
+                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Enter your phone number"
+                        placeholderTextColor={COLORS.textMuted}
+                        value={phone}
+                        onChangeText={(text) => {
+                          setPhone(text.replace(/[^0-9]/g, ''));
+                          if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+                        }}
+                        keyboardType="numeric"
+                        maxLength={10}
+                      />
+                    </LinearGradient>
+                  </View>
+                  {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+                </View>
+
+                {/* City Dropdown */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>City</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownContainer, errors.city && styles.inputError]}
+                    onPress={() => setShowCityModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={[COLORS.surfaceAlt, COLORS.surface]}
+                      style={styles.dropdownGradient}
+                    >
+                      <View style={styles.inputIconContainer}>
+                        <Text style={styles.inputIcon}>🏙️</Text>
+                      </View>
+                      <Text style={[
+                        styles.dropdownText,
+                        !selectedCity && styles.placeholderText
+                      ]}>
+                        {selectedCity ? cityAreaData[selectedCity].name : 'Select your city'}
+                      </Text>
+                      <Text style={styles.dropdownArrow}>▼</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+                </View>
+
+                {/* Area Dropdown */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Area</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownContainer,
+                      !selectedCity && styles.disabledDropdown,
+                      errors.area && styles.inputError
+                    ]}
+                    onPress={() => selectedCity && setShowAreaModal(true)}
+                    disabled={!selectedCity}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={!selectedCity ? [COLORS.borderLight, COLORS.borderLight] : [COLORS.surfaceAlt, COLORS.surface]}
+                      style={styles.dropdownGradient}
+                    >
+                      <View style={styles.inputIconContainer}>
+                        <Text style={styles.inputIcon}>📍</Text>
+                      </View>
+                      <Text style={[
+                        styles.dropdownText,
+                        (!selectedArea || !selectedCity) && styles.placeholderText
+                      ]}>
+                        {selectedArea && selectedCity ? getSelectedAreaName() : 'Select your area'}
+                      </Text>
+                      <Text style={[
+                        styles.dropdownArrow,
+                        !selectedCity && styles.disabledArrow
+                      ]}>▼</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  {errors.area && <Text style={styles.errorText}>{errors.area}</Text>}
+                </View>
+
+                {/* Full Address Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Address</Text>
+                  <View style={[styles.addressContainer, errors.fullAddress && styles.inputError]}>
+                    <LinearGradient
+                      colors={[COLORS.surfaceAlt, COLORS.surface]}
+                      style={styles.addressGradient}
+                    >
+                      <View style={styles.inputIconContainer}>
+                        <Text style={styles.inputIcon}>🏠</Text>
+                      </View>
+                      <TextInput
+                        style={[styles.textInput, styles.addressInput]}
+                        placeholder="House/flat number, street, etc."
+                        placeholderTextColor={COLORS.textMuted}
+                        value={fullAddress}
+                        onChangeText={(text) => {
+                          setFullAddress(text);
+                          if (errors.fullAddress) setErrors(prev => ({ ...prev, fullAddress: '' }));
+                        }}
+                        multiline={true}
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    </LinearGradient>
+                  </View>
+                  {errors.fullAddress && <Text style={styles.errorText}>{errors.fullAddress}</Text>}
+                </View>
+
+                {/* Enhanced Submit Button */}
+                <TouchableOpacity
+                  style={[styles.submitButton, isLoading && styles.disabledButton]}
+                  onPress={handleSubmit}
+                  activeOpacity={0.8}
+                  disabled={isLoading}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, COLORS.primaryDark]}
+                    style={styles.submitGradient}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      {isLoading ? 'Registering...' : 'Complete Registration'}
+                    </Text>
+                    {!isLoading && <Text style={styles.submitArrow}>→</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </ScrollView>
+            </LinearGradient>
+          </Animated.View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+
+      {/* Enhanced Modals */}
       {renderCityModal()}
       {renderAreaModal()}
     </SafeAreaView>
@@ -553,190 +767,250 @@ export default function UserDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.background,
   },
+  
+  // FIXED: Keyboard handling
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  
   content: {
     flex: 1,
-    paddingHorizontal: width * 0.05,
-    paddingTop: height * 0.04,
-    paddingBottom: height * 0.02,
-    justifyContent: 'space-between',
+    paddingHorizontal: SCREEN_PADDING,
+    paddingTop: Platform.OS === 'ios' ? SPACING.xl : SPACING.xxl,
+    paddingBottom: SPACING.lg,
   },
 
-  // Header - Compact for small screens
+  // Enhanced Header Styles
   header: {
     alignItems: 'center',
-    paddingBottom: height * 0.015,
+    paddingBottom: SPACING.xl,
   },
   logoContainer: {
-    marginBottom: height * 0.01,
+    position: 'relative',
+    marginBottom: SPACING.lg,
   },
   logoCircle: {
-    width: Math.min(width * 0.12, 50),
-    height: Math.min(width * 0.12, 50),
-    borderRadius: Math.min(width * 0.06, 25),
+    width: isTablet ? 70 : 60,
+    height: isTablet ? 70 : 60,
+    borderRadius: isTablet ? 35 : 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  logoRing: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: isTablet ? 39 : 34,
+    borderWidth: 2,
+    borderColor: COLORS.primaryLight,
+    opacity: 0.6,
   },
   logoText: {
-    fontSize: Math.min(width * 0.06, 24),
+    fontSize: isTablet ? FONTS.xxl : FONTS.xl,
   },
   appTitle: {
-    fontSize: Math.min(width * 0.07, 28),
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 3,
+    fontSize: isTablet ? FONTS.xxxl : FONTS.xxl,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   appTitleAccent: {
-    color: '#FF6B35',
+    color: COLORS.primary,
   },
   appSubtitle: {
-    fontSize: Math.min(width * 0.035, 14),
-    color: '#6b7280',
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     fontWeight: '500',
   },
   
-  // User info container
+  // Enhanced User info container
   userInfoContainer: {
-    marginTop: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: '#FEF3E2',
-    borderRadius: 10,
-    borderColor: '#FF6B35',
-    borderWidth: 1,
+    marginTop: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  userInfoGradient: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   userInfoText: {
-    fontSize: Math.min(width * 0.035, 14),
-    color: '#FF6B35',
-    fontWeight: '600',
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.primary,
+    fontWeight: '700',
     textAlign: 'center',
   },
 
-  // Form Card - Responsive
+  // Enhanced Form Card
   formCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: width * 0.05,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    borderRadius: BORDER_RADIUS.xxl,
+    elevation: 8,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
     shadowRadius: 12,
-    elevation: 6,
-    maxHeight: height * 0.75,
+    overflow: 'hidden',
+  },
+  formGradient: {
+    flex: 1,
+    padding: isTablet ? SPACING.xxl : SPACING.xl,
+  },
+  scrollContent: {
+    paddingBottom: SPACING.xl,
   },
 
-  // Input Groups - Compact spacing
+  // Enhanced Input Groups
   inputGroup: {
-    marginBottom: height * 0.015,
+    marginBottom: SPACING.xl,
   },
   inputLabel: {
-    fontSize: Math.min(width * 0.037, 15),
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    letterSpacing: 0.2,
   },
   inputContainer: {
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  inputGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: height * 0.012,
-    minHeight: height * 0.05,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    minHeight: isTablet ? 56 : 48,
   },
   addressContainer: {
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  addressGradient: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: height * 0.012,
-    minHeight: height * 0.065,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    minHeight: isTablet ? 100 : 80,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: COLORS.error,
+  },
+  inputIconContainer: {
+    width: isTablet ? 32 : 28,
+    height: isTablet ? 32 : 28,
+    borderRadius: isTablet ? 16 : 14,
+    backgroundColor: COLORS.primaryUltraLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
   },
   inputIcon: {
-    fontSize: Math.min(width * 0.045, 18),
-    marginRight: 10,
-    marginTop: 1,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
   },
   textInput: {
     flex: 1,
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#1F2937',
-    fontWeight: '500',
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
   },
   addressInput: {
-    minHeight: height * 0.05,
+    minHeight: isTablet ? 60 : 48,
     textAlignVertical: 'top',
     paddingTop: 0,
   },
 
-  // Dropdown - Responsive
+  // Enhanced Dropdown
   dropdownContainer: {
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  dropdownGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: height * 0.014,
-    minHeight: height * 0.05,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    minHeight: isTablet ? 56 : 48,
   },
   disabledDropdown: {
-    backgroundColor: '#F3F4F6',
     opacity: 0.6,
   },
   dropdownText: {
     flex: 1,
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#1F2937',
-    fontWeight: '500',
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
   },
   placeholderText: {
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
   },
   dropdownArrow: {
-    fontSize: 10,
-    color: '#6B7280',
-    fontWeight: 'bold',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
   },
   disabledArrow: {
-    color: '#D1D5DB',
+    color: COLORS.textDisabled,
   },
 
-  // Error Text - Compact
+  // Enhanced Error Text
   errorText: {
-    fontSize: Math.min(width * 0.032, 12),
-    color: '#EF4444',
-    marginTop: 3,
-    fontWeight: '500',
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.error,
+    marginTop: SPACING.sm,
+    fontWeight: '600',
+    marginLeft: SPACING.sm,
   },
 
-  // Submit Button - Responsive
+  // Enhanced Submit Button
   submitButton: {
-    marginTop: height * 0.015,
-    borderRadius: 14,
-    shadowColor: '#FF6B35',
+    marginTop: SPACING.xl,
+    borderRadius: BORDER_RADIUS.xl,
+    elevation: 6,
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 10,
+    overflow: 'hidden',
   },
   disabledButton: {
     opacity: 0.6,
@@ -745,82 +1019,128 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: height * 0.015,
-    paddingHorizontal: width * 0.06,
-    borderRadius: 14,
+    paddingVertical: isTablet ? SPACING.xl : SPACING.lg,
+    paddingHorizontal: SPACING.xl,
   },
   submitButtonText: {
-    fontSize: Math.min(width * 0.042, 17),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginRight: 8,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    fontWeight: '800',
+    color: COLORS.textInverse,
+    marginRight: SPACING.md,
+    letterSpacing: 0.3,
   },
   submitArrow: {
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#fff',
-    fontWeight: 'bold',
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textInverse,
+    fontWeight: '800',
   },
 
-  // Modal - Responsive
+  // Enhanced Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: width * 0.045,
-    maxHeight: height * 0.5,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xxl,
+    borderTopRightRadius: BORDER_RADIUS.xxl,
+    maxHeight: height * 0.6,
+    elevation: 12,
+    shadowColor: COLORS.shadowDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
   },
-  modalScrollView: {
-    maxHeight: height * 0.35,
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginVertical: SPACING.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
+    paddingBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
   },
   modalTitle: {
-    fontSize: Math.min(width * 0.05, 20),
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: height * 0.02,
+    fontSize: isTablet ? FONTS.xl : FONTS.lg,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.2,
+  },
+  closeButton: {
+    width: isTablet ? 36 : 32,
+    height: isTablet ? 36 : 32,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  closeButtonText: {
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+  },
+  modalScrollView: {
+    maxHeight: height * 0.4,
+    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.xl,
   },
   modalItem: {
+    marginBottom: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    elevation: 2,
+    shadowColor: COLORS.shadowLight,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
+  },
+  selectedModalItem: {},
+  modalItemGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: height * 0.012,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginBottom: 6,
-    backgroundColor: '#F9FAFB',
-  },
-  selectedModalItem: {
-    backgroundColor: '#FEF3E2',
-    borderColor: '#FF6B35',
-    borderWidth: 1.5,
+    paddingVertical: isTablet ? SPACING.lg : SPACING.md,
+    paddingHorizontal: isTablet ? SPACING.lg : SPACING.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
   },
   modalItemIcon: {
-    fontSize: Math.min(width * 0.045, 18),
-    marginRight: 10,
+    fontSize: isTablet ? FONTS.lg : FONTS.base,
+    marginRight: SPACING.md,
+    width: isTablet ? 28 : 24,
   },
   modalItemText: {
     flex: 1,
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#1F2937',
-    fontWeight: '500',
+    fontSize: isTablet ? FONTS.base : FONTS.sm,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
   },
-  checkIcon: {
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#FF6B35',
-    fontWeight: 'bold',
+  selectedModalItemText: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
-  modalCloseButton: {
-    marginTop: height * 0.015,
-    paddingVertical: height * 0.012,
+  selectedIndicator: {
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  selectedIndicatorGradient: {
+    width: isTablet ? 28 : 24,
+    height: isTablet ? 28 : 24,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCloseText: {
-    fontSize: Math.min(width * 0.037, 15),
-    color: '#6B7280',
-    fontWeight: '600',
+  checkIcon: {
+    fontSize: isTablet ? FONTS.sm : FONTS.xs,
+    color: COLORS.textInverse,
+    fontWeight: '900',
   },
 });

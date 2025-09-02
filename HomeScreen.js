@@ -313,10 +313,10 @@ const ProductDetailModal = ({ visible, product, onClose, cartItems, addToCart })
       
       if (result.success) {
         onClose();
-        Alert.alert('Added to Cart', `${product.name} has been added successfully!`);
+     
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
+    
       Alert.alert('Error', 'Failed to add item to cart. Please try again.');
     } finally {
       setAdding(false);

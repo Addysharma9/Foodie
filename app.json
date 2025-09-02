@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Foodie",
-    "slug": "Foodie", 
+    "slug": "Foodie",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -11,34 +11,65 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "google",
+            "CFBundleURLName": "com.googleusercontent.apps.88618355277-tqcmbevvio",
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.88618355277-tqbeqvv88c7f4cm37g1d4urblpmonvio"
+              "com.googleusercontent.apps.88618355277-tqcmbevvio"
             ]
           }
         ],
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to provide better delivery services.",
+        "NSCameraUsageDescription": "This app uses the camera for taking profile pictures.",
+        "NSPhotoLibraryUsageDescription": "The app accesses your photos for profile pictures.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
             "212.38.94.189": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSExceptionAllowsInsecureLoads": true,
+              "NSMinimumTLSVersion": "1.0",
               "NSIncludesSubdomains": true
             }
           }
         }
+      },
+      "infoPlistPrivacy": {
+        "NSLocationWhenInUseUsageDescription": "Allow location usage for delivery services"
       }
     },
     "android": {
       "package": "com.arunsharma9018.Foodie",
       "googleServicesFile": "./google-services.json",
-      "usesCleartextTraffic": true
+      "versionCode": 1,
+      "permissions": [
+        "LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS"
+      ],
+      "useNextNotificationsApi": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "com.googleusercontent.apps.88618355277-tqcmbevvio"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "plugins": [
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.88618355277-tqbeqvv88c7f4cm37g1d4urblpmonvio"
+          "iosUrlScheme": "com.googleusercontent.apps.88618355277-tqcmbevvio"
         }
       ],
       [
@@ -48,7 +79,43 @@
             "useFrameworks": "static"
           }
         }
-      ]
-    ]
+      ],
+      "expo-notifications"
+    ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#FF6C00",
+      "ios": {
+        "sound": true,
+        "criticalAlert": false,
+        "badge": true,
+        "alert": true
+      },
+      "android": {
+        "channelId": "meal-reminders",
+        "sound": true,
+        "priority": "high",
+        "vibrate": [
+          0,
+          250,
+          250,
+          250
+        ],
+        "icon": "./assets/notification-icon.png",
+        "color": "#FF6C00"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e85a8787-77e4-4d6c-8028-e58067874f31"
+      }
+    },
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#ffffff",
+      "translucent": false
+    },
+    "scheme": "com.googleusercontent.apps.88618355277-tqcmbevvio",
+    "owner": "arunsharma9018"
   }
 }
