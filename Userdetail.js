@@ -19,7 +19,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-
+import { CommonActions } from '@react-navigation/native';
 const { width, height } = Dimensions.get('window');
 const isTablet = width > 768;
 
@@ -67,19 +67,19 @@ const COLORS = {
   primaryDark: '#E8541C',
   primaryLight: '#FFE8E0',
   primaryUltraLight: '#FFF5F2',
-  
+
   // Enhanced secondary colors
   secondary: '#4A90E2',
   accent: '#F7B731',
   accentLight: '#FEF3CD',
-  
+
   // Sophisticated neutrals
   background: '#FAFBFC',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
   surfaceAlt: '#F8F9FA',
   surfaceCard: '#FFFFFF',
-  
+
   // Typography hierarchy
   text: '#1A1D29',
   textPrimary: '#2C2F36',
@@ -87,7 +87,7 @@ const COLORS = {
   textMuted: '#9CA3AF',
   textDisabled: '#D1D5DB',
   textInverse: '#FFFFFF',
-  
+
   // Status colors
   success: '#10B981',
   successLight: '#D1FAE5',
@@ -97,17 +97,17 @@ const COLORS = {
   warningLight: '#FEF3C7',
   info: '#3B82F6',
   infoLight: '#DBEAFE',
-  
+
   // Enhanced borders and dividers
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
   divider: '#F1F3F4',
-  
+
   // Professional shadows
   shadow: 'rgba(17, 25, 40, 0.12)',
   shadowDark: 'rgba(17, 25, 40, 0.25)',
   shadowLight: 'rgba(17, 25, 40, 0.06)',
-  
+
   // Glass morphism
   glass: 'rgba(255, 255, 255, 0.85)',
   glassBlur: 'rgba(255, 255, 255, 0.2)',
@@ -142,9 +142,9 @@ const cityAreaData = {
 
 export default function UserDetailsScreen() {
   console.log('🎯 UserDetailsScreen - Profile Setup Form loaded!');
-  
+
   const navigation = useNavigation();
-  
+
   // Form state - Same as your reference
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -155,7 +155,7 @@ export default function UserDetailsScreen() {
   const [showAreaModal, setShowAreaModal] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Backend integration state
   const [userToken, setUserToken] = useState(null);
   const [userEmail, setUserEmail] = useState('');
@@ -207,27 +207,27 @@ export default function UserDetailsScreen() {
   const loadUserData = async () => {
     try {
       console.log('📱 Loading stored user data...');
-      
+
       const token = await AsyncStorage.getItem('@user_token');
       const email = await AsyncStorage.getItem('@user_email');
       const userData = await AsyncStorage.getItem('@user_data');
-      
+
       console.log('📱 Token:', token);
       console.log('📱 Email:', email);
-      
+
       if (token && email) {
         setUserToken(token);
         setUserEmail(email);
-        
+
         // Set cache data for display
         if (userData) {
           try {
             const parsedData = JSON.parse(userData);
             setCacheData(parsedData);
-            
+
             // Pre-fill form with existing data
             if (parsedData.name) setName(parsedData.name);
-            
+
             console.log('📋 Pre-filled existing data');
           } catch (error) {
             console.log('⚠️ Error parsing existing user data');
@@ -244,23 +244,27 @@ export default function UserDetailsScreen() {
         }
       } else {
         console.log('❌ No valid token found, redirecting to login');
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          })
+        );
       }
     } catch (error) {
       console.error('❌ Error loading user data:', error);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      );
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!name.trim()) newErrors.name = 'Name is required';
     if (!phone.trim()) newErrors.phone = 'Phone number is required';
     else if (phone.length < 10) newErrors.phone = 'Enter valid phone number';
@@ -276,7 +280,7 @@ export default function UserDetailsScreen() {
   const handleSubmit = async () => {
     if (validateForm()) {
       setIsLoading(true);
-      
+
       try {
         console.log('💾 Saving profile data to backend...');
         console.log('🔑 Using token:', userToken);
@@ -344,10 +348,13 @@ export default function UserDetailsScreen() {
                 text: 'Continue',
                 onPress: () => {
                   console.log('🏠 Navigating to Home after registration');
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Home' }],
-                  });
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: 'MainTabs' }], // ✅ correct stack route
+                    })
+                  );
+
                 }
               }
             ]
@@ -422,7 +429,7 @@ export default function UserDetailsScreen() {
               >
                 <LinearGradient
                   colors={
-                    selectedCity === cityKey 
+                    selectedCity === cityKey
                       ? [COLORS.primaryUltraLight, COLORS.primaryLight]
                       : [COLORS.surface, COLORS.surfaceAlt]
                   }
@@ -487,7 +494,7 @@ export default function UserDetailsScreen() {
               >
                 <LinearGradient
                   colors={
-                    selectedArea === area.id 
+                    selectedArea === area.id
                       ? [COLORS.primaryUltraLight, COLORS.primaryLight]
                       : [COLORS.surface, COLORS.surfaceAlt]
                   }
@@ -522,14 +529,14 @@ export default function UserDetailsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      
+
       {/* FIXED: KeyboardAvoidingView for proper keyboard handling */}
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <Animated.View 
+        <Animated.View
           style={[
             styles.content,
             {
@@ -557,7 +564,7 @@ export default function UserDetailsScreen() {
             <Text style={styles.appSubtitle}>
               Help us deliver to your doorstep
             </Text>
-            
+
             {/* Display user info if available */}
             {cacheData && (
               <View style={styles.userInfoContainer}>
@@ -574,7 +581,7 @@ export default function UserDetailsScreen() {
           </View>
 
           {/* Enhanced Form Card */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.formCard,
               { transform: [{ scale: formScaleAnim }] }
@@ -584,7 +591,7 @@ export default function UserDetailsScreen() {
               colors={[COLORS.surface, COLORS.surfaceElevated]}
               style={styles.formGradient}
             >
-              <ScrollView 
+              <ScrollView
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.scrollContent}
@@ -769,12 +776,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  
+
   // FIXED: Keyboard handling
   keyboardAvoidingView: {
     flex: 1,
   },
-  
+
   content: {
     flex: 1,
     paddingHorizontal: SCREEN_PADDING,
@@ -834,7 +841,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  
+
   // Enhanced User info container
   userInfoContainer: {
     marginTop: SPACING.lg,

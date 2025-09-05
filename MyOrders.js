@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,10 +16,11 @@ import {
   Alert,
   Vibration,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import FloatingGirlAssistant from './Animatedgirl';
+import FloatingGirlAssistant from './components/Animatedgirl';
 import { useCart } from './hooks/useCart';
 
 const { width, height } = Dimensions.get('window');
@@ -102,6 +103,84 @@ const getImageUrl = (imagePath) => {
   if (imagePath.startsWith('/products/') || imagePath.startsWith('/categories/')) return `${baseURL}/storage/${imagePath.slice(1)}`;
   if (/\.(jpg|jpeg|png|gif|webp)$/i.test(imagePath)) return `${baseURL}/storage/products/${imagePath}`;
   return `${baseURL}/storage/${imagePath}`;
+};
+
+// Helper functions for status configuration
+const getStatusConfig = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return { color: COLORS.warning, text: 'Pending' };
+    case 'confirmed':
+      return { color: COLORS.info, text: 'Confirmed' };
+    case 'preparing':
+      return { color: COLORS.primary, text: 'Preparing' };
+    case 'on_way':
+    case 'out_for_delivery':
+      return { color: COLORS.accent, text: 'On the way' };
+    case 'delivered':
+      return { color: COLORS.success, text: 'Delivered' };
+    case 'cancelled':
+      return { color: COLORS.error, text: 'Cancelled' };
+    default:
+      return { color: COLORS.textMuted, text: 'Unknown' };
+  }
+};
+
+// Helper functions for progress
+const getProgressPercentage = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 20;
+    case 'confirmed': return 40;
+    case 'preparing': return 60;
+    case 'on_way': case 'out_for_delivery': return 80;
+    case 'delivered': return 100;
+    case 'cancelled': return 0;
+    default: return 0;
+  }
+};
+
+const getProgressText = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'pending': return 'Order received and being processed';
+    case 'confirmed': return 'Order confirmed, preparation starting';
+    case 'preparing': return 'Your order is being prepared';
+    case 'on_way': case 'out_for_delivery': return 'Order is on the way to you';
+    case 'delivered': return 'Order delivered successfully';
+    case 'cancelled': return 'Order was cancelled';
+    default: return 'Checking order status...';
+  }
+};
+
+// FIXED: Function to group items by order_id + product_id to keep orders separate
+const groupOrderItems = (items) => {
+  const groupedItems = {};
+  
+  items.forEach(item => {
+    const product = item.product || item;
+    const productId = product.id || item.id;
+    // FIXED: Include order_id in the key to prevent merging different orders
+    const key = `${item.order_id}-${productId}-${item.order_status}`;
+    
+    if (groupedItems[key]) {
+      const existingQty = parseInt(groupedItems[key].total_quantity || groupedItems[key].quantity || 1);
+      const newQty = parseInt(item.quantity || 1);
+      groupedItems[key].total_quantity = existingQty + newQty;
+      
+      if (new Date(item.order_created_at) > new Date(groupedItems[key].order_created_at)) {
+        groupedItems[key].order_created_at = item.order_created_at;
+        groupedItems[key].order_id = item.order_id;
+        groupedItems[key].order_number = item.order_number;
+      }
+    } else {
+      groupedItems[key] = {
+        ...item,
+        total_quantity: parseInt(item.quantity || 1),
+        unique_key: key
+      };
+    }
+  });
+  
+  return Object.values(groupedItems);
 };
 
 // Skeleton Loading Components
@@ -456,83 +535,6 @@ const OrderItemCard = ({ orderItem, addToCart, isItemInCart, getItemQuantity }) 
   );
 };
 
-// Helper functions for status configuration
-const getStatusConfig = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'pending':
-      return { color: COLORS.warning, text: 'Pending' };
-    case 'confirmed':
-      return { color: COLORS.info, text: 'Confirmed' };
-    case 'preparing':
-      return { color: COLORS.primary, text: 'Preparing' };
-    case 'on_way':
-    case 'out_for_delivery':
-      return { color: COLORS.accent, text: 'On the way' };
-    case 'delivered':
-      return { color: COLORS.success, text: 'Delivered' };
-    case 'cancelled':
-      return { color: COLORS.error, text: 'Cancelled' };
-    default:
-      return { color: COLORS.textMuted, text: 'Unknown' };
-  }
-};
-
-// Helper functions for progress
-const getProgressPercentage = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'pending': return 20;
-    case 'confirmed': return 40;
-    case 'preparing': return 60;
-    case 'on_way': case 'out_for_delivery': return 80;
-    case 'delivered': return 100;
-    case 'cancelled': return 0;
-    default: return 0;
-  }
-};
-
-const getProgressText = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'pending': return 'Order received and being processed';
-    case 'confirmed': return 'Order confirmed, preparation starting';
-    case 'preparing': return 'Your order is being prepared';
-    case 'on_way': case 'out_for_delivery': return 'Order is on the way to you';
-    case 'delivered': return 'Order delivered successfully';
-    case 'cancelled': return 'Order was cancelled';
-    default: return 'Checking order status...';
-  }
-};
-
-// Function to group items by product ID and sum quantities
-const groupOrderItems = (items) => {
-  const groupedItems = {};
-  
-  items.forEach(item => {
-    const product = item.product || item;
-    const productId = product.id || item.id;
-    const key = `${productId}-${item.order_status}`;
-    
-    if (groupedItems[key]) {
-      const existingQty = parseInt(groupedItems[key].total_quantity || groupedItems[key].quantity || 1);
-      const newQty = parseInt(item.quantity || 1);
-      groupedItems[key].total_quantity = existingQty + newQty;
-      
-      if (new Date(item.order_created_at) > new Date(groupedItems[key].order_created_at)) {
-        groupedItems[key].order_created_at = item.order_created_at;
-        groupedItems[key].order_id = item.order_id;
-        groupedItems[key].order_number = item.order_number;
-      }
-    } else {
-      groupedItems[key] = {
-        ...item,
-        total_quantity: parseInt(item.quantity || 1),
-        unique_key: key
-      };
-    }
-  });
-  
-  return Object.values(groupedItems);
-};
-
 // Main MyOrder Component
 export default function MyOrder() {
   const navigation = useNavigation();
@@ -541,6 +543,7 @@ export default function MyOrder() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [userId, setUserId] = useState(null);
+  const [focusRefreshing, setFocusRefreshing] = useState(false);
 
   // Use the cart hook
   const cartHookResult = useCart();
@@ -548,21 +551,13 @@ export default function MyOrder() {
     addToCart = () => Promise.resolve({ success: false }),
     getItemQuantity = () => 0,
     isItemInCart = () => false,
+    refreshCart = () => Promise.resolve(),
   } = cartHookResult || {};
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const isInitialLoad = useRef(true);
 
-  useEffect(() => {
-    getUserId();
-    animateIn();
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      fetchOrderItems();
-    }
-  }, [userId]);
-
+  // getUserId function
   const getUserId = async () => {
     try {
       const email = await AsyncStorage.getItem('@user_email');
@@ -611,12 +606,14 @@ export default function MyOrder() {
     }).start();
   };
 
-  // Fetch and flatten order items from products array
-  const fetchOrderItems = async () => {
+  // FIXED: Fetch orders function with proper unique key generation
+  const fetchOrderItems = async (showLoading = true) => {
     if (!userId) return;
 
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       
       const response = await fetch(`${baseURL}/api/orders/user/${userId}`, {
         method: 'GET',
@@ -663,12 +660,14 @@ export default function MyOrder() {
                   }
                   return 150;
                 })(),
-                unique_key: `${order.id}-${item.id || item.product_id}-${index}-${Date.now()}`
+                // FIXED: More unique key that includes order_id to prevent conflicts
+                unique_key: `${order.id}-${item.id || item.product_id}-${index}-${order.created_at}`
               });
             });
           }
         });
 
+        // Apply grouping (now with order_id in key)
         const groupedItems = groupOrderItems(flattenedItems);
         groupedItems.sort((a, b) => new Date(b.order_created_at) - new Date(a.order_created_at));
         
@@ -687,16 +686,76 @@ export default function MyOrder() {
       setOrderItems([]);
       Alert.alert('Network Error', 'Please check your connection and try again.');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
+  // Initial setup
+  useEffect(() => {
+    getUserId();
+    animateIn();
+  }, []);
+
+  // Fetch orders when userId is available
+  useEffect(() => {
+    if (userId) {
+      fetchOrderItems(true);
+    }
+  }, [userId]);
+
+  // Focus refresh effect with cart refresh
+  useFocusEffect(
+    useCallback(() => {
+      // Skip refresh on initial focus
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        return;
+      }
+
+      // Only refresh if not already refreshing and have userId
+      if (userId && !loading && !focusRefreshing) {
+        const refreshData = async () => {
+          console.log('MyOrder screen focused - refreshing data...');
+          setFocusRefreshing(true);
+          
+          try {
+            await Promise.all([
+              fetchOrderItems(false), // false = don't trigger main loading
+              refreshCart()
+            ]);
+            
+            console.log('Order and cart data refreshed successfully on focus');
+          } catch (error) {
+            console.error('Error refreshing data on focus:', error);
+          } finally {
+            setFocusRefreshing(false);
+          }
+        };
+
+        refreshData();
+      }
+    }, [userId])
+  );
+
+  // Pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchOrderItems();
-    setRefreshing(false);
+    
+    try {
+      await Promise.all([
+        fetchOrderItems(false),
+        refreshCart()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
+  // Filter functions
   const filterItems = (status) => {
     if (status === 'all') return orderItems;
     if (status === 'on_way') {
@@ -722,6 +781,7 @@ export default function MyOrder() {
     { id: 'cancelled', label: 'Cancelled', count: filterItems('cancelled').length },
   ];
 
+  // Render functions
   const renderOrderItem = ({ item }) => (
     <OrderItemCard 
       orderItem={item} 
@@ -756,10 +816,14 @@ export default function MyOrder() {
     </View>
   );
 
+  // Loading state check
   if (!userId && loading) {
     return (
-     <>
-     </>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -771,7 +835,14 @@ export default function MyOrder() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity 
-            onPress={() => navigation.replace('Home')} 
+            onPress={() => {
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'MainTabs' }],
+                })
+              );
+            }} 
             style={styles.backButton}
           >
             <Text style={styles.backButtonText}>←</Text>
@@ -865,6 +936,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    fontSize: FONTS.sizes.base,
+    color: COLORS.textSecondary,
+    fontWeight: FONTS.weights.medium,
+    textAlign: 'center',
   },
   header: {
     backgroundColor: COLORS.surface,
@@ -977,8 +1060,6 @@ const styles = StyleSheet.create({
   emptyContentContainer: {
     flexGrow: 1,
   },
-  
-  // Order Item Card Styles
   orderItemCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -1180,20 +1261,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     fontWeight: FONTS.weights.semiBold,
   },
-  helpButton: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceAlt,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  helpButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: FONTS.sizes.sm,
-    fontWeight: FONTS.weights.medium,
-  },
   progressIndicator: {
     paddingHorizontal: CARD_PADDING,
     paddingBottom: CARD_PADDING,
@@ -1214,8 +1281,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
-
-  // Status Badge Styles
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1235,8 +1300,6 @@ const styles = StyleSheet.create({
     fontWeight: FONTS.weights.semiBold,
     color: COLORS.textInverse,
   },
-
-  // Empty State
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1281,22 +1344,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.base,
     fontWeight: FONTS.weights.semiBold,
   },
-
-  // Loading State
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loadingText: {
-    fontSize: FONTS.sizes.base,
-    color: COLORS.textSecondary,
-    fontWeight: FONTS.weights.medium,
-    textAlign: 'center',
-  },
-
-  // Skeleton Loading Styles
   skeletonCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,

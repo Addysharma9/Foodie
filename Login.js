@@ -18,7 +18,7 @@ import Checkbox from 'expo-checkbox';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
-
+import { CommonActions } from '@react-navigation/native';
 const { width, height } = Dimensions.get('window');
 const isTablet = width > 768;
 
@@ -261,7 +261,7 @@ export default function Login() {
           setTimeout(() => {
             navigation.reset({
               index: 0,
-              routes: [{ name: 'Home' }],
+              routes: [{ name: 'MainTabs' }],
             });
           }, 500);
           
@@ -710,10 +710,14 @@ export default function Login() {
           await AsyncStorage.setItem('@user_data', JSON.stringify(userDataToStore));
           
           setNavigationAttempted(true);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Home' }],
-          });
+      // ✅ CORRECT - Navigate to MainTabs which contains Home
+navigation.dispatch(
+  CommonActions.reset({
+    index: 0,
+    routes: [{ name: 'MainTabs' }],
+  })
+);
+
         }
         
       } else {

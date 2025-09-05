@@ -14,6 +14,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CommonActions } from '@react-navigation/native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
@@ -358,15 +359,25 @@ total_amount: parseFloat(calculatedTotal.toFixed(2)),
     }
 
     if (response.ok && result.message === 'Order placed successfully') {
-      Alert.alert('🎉 Order Placed!', 'Your order has been placed successfully.', [
-        {
-          text: 'OK',
-          onPress: () => navigation.replace('Home'),
-        },
-      ]);
-    } else {
-      throw new Error(result.message || 'Failed to place order. Please try again.');
-    }
+  Alert.alert('🎉 Order Placed!', 'Your order has been placed successfully.', [
+    {
+      text: 'OK',
+     onPress: () => {
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }], // If your tabs are named 'MainTabs'
+    })
+  );
+}
+
+
+    },
+  ]); // ✅ Missing closing bracket was here
+} else {
+  throw new Error(result.message || 'Failed to place order. Please try again.');
+}
+
   } catch (error) {
     console.error('Error placing order:', error);
     Alert.alert('❌ Order Failed', error.message || 'Failed to place order. Please try again.');
